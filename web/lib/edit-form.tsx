@@ -1,0 +1,472 @@
+"use client";
+
+// The real edit-your-seal form. Loads NameStone record for the signed-in
+// user's wallet, lets them edit bio/location/avatar/skills, posts back.
+import { usePrivy, useIdentityToken, useSignMessage } from "@privy-io/react-auth";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Cartouche, FleurDeLis, AlchemicalSigil, type SigilKind } from "./ornaments";
+import { derivePragaKeys, PRAGA_STEALTH_MESSAGE } from "./stealth";
+import { useT } from "./i18n";
+
+interface Skill {
+  kind: SigilKind;
+  name: string;
+  price: string;
+}
+
+interface MyName {
+  claimed: boolean;
+  label?: string;
+  ens?: string;
+  text_records?: Record<string, string>;
+}
+
+const KIND_OPTIONS: SigilKind[] = ["forge", "alembic", "venus", "mercury", "saturn", "caduceus", "sulphur"];
+
+function decodeSkills(raw: string | undefined): Skill[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((s) => s && typeof s === "object")
+      .map((s: { kind?: string; name?: string; price?: string }) => ({
+        kind: (KIND_OPTIONS as string[]).includes(s.kind ?? "") ? (s.kind as SigilKind) : "forge",
+        name: typeof s.name === "string" ? s.name : "",
+        price: typeof s.price === "string" ? s.price : "",
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export function EditForm() {
+  const { ready, authenticated, login, user } = usePrivy();
+  const { identityToken } = useIdentityToken();
+  const { signMessage } = useSignMessage();
+  const t = useT();
+  const router = useRouter();
+  const [sealing, setSealing] = useState(false);
+  const [stealthMeta, setStealthMeta] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedAt, setPublishedAt] = useState<{ limo: string; bzz: string } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [myName, setMyName] = useState<MyName | null>(null);
+
+  // Form state
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [location, setLocation] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [skills, setSkills] = useState<Skill[]>([]);
+
+  const address = user?.wallet?.address;
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!authenticated || !identityToken) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setErr(null);
+      try {
+        const res = await fetch("/api/my-name", {
+          headers: { Authorization: `Bearer ${identityToken}` },
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setErr(data.error ?? "could-not-load");
+        } else {
+          setMyName(data);
+          if (data.claimed) {
+            const tr: Record<string, string> = data.text_records ?? {};
+            setDisplayName(tr.name ?? "");
+            setBio(tr.description ?? "");
+            setLocation(tr.location ?? "");
+            setAvatar(tr.avatar ?? "");
+            setSkills(decodeSkills(tr.skills));
+            setStealthMeta(tr["stealth-meta-address"] ?? "");
+          }
+        }
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : "fetch-failed");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, authenticated, identityToken]);
+
+  const canSave = useMemo(
+    () => authenticated && identityToken && myName?.claimed && !saving,
+    [authenticated, identityToken, myName, saving],
+  );
+
+  const onSealStealth = async () => {
+    if (!myName?.label || !identityToken) return;
+    setSealing(true);
+    setErr(null);
+    try {
+      const { signature } = await signMessage({ message: PRAGA_STEALTH_MESSAGE });
+      const keys = derivePragaKeys(signature as `0x${string}`);
+      const res = await fetch("/api/update-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${identityToken}`,
+        },
+        body: JSON.stringify({
+          label: myName.label,
+          fields: { "stealth-meta-address": keys.metaAddress },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErr(data.error ?? "stealth-save-failed");
+        return;
+      }
+      setStealthMeta(keys.metaAddress);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "stealth-failed");
+    } finally {
+      setSealing(false);
+    }
+  };
+
+  const onSave = async () => {
+    if (!myName?.label || !identityToken) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const fields: Record<string, string> = {
+        name: displayName,
+        description: bio,
+        location,
+        avatar,
+        skills: JSON.stringify(skills.filter((s) => s.name.trim())),
+      };
+      const res = await fetch("/api/update-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${identityToken}`,
+        },
+        body: JSON.stringify({ label: myName.label, fields }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErr(data.error ?? "save-failed");
+        return;
+      }
+      // Fire-and-forget Swarm publish so the .eth.limo personal site stays
+      // in sync with the latest text records. Save completes regardless.
+      publishToSwarm();
+      router.push(`/${myName.ens}`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "save-failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const publishToSwarm = async () => {
+    if (!myName?.label || !identityToken) return;
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/publish-site", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${identityToken}`,
+        },
+        body: JSON.stringify({ label: myName.label }),
+      });
+      const data = await res.json();
+      if (res.ok && data.limo) {
+        setPublishedAt({ limo: data.limo, bzz: data.bzz });
+      }
+    } catch {
+      /* swarm publish is best-effort */
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  if (!ready) {
+    return <Shell><Loader text="preparing the wax…" /></Shell>;
+  }
+  if (!authenticated) {
+    return (
+      <Shell>
+        <Cartouche padding={32} style={{ textAlign: "center", maxWidth: 420 }}>
+          <FleurDeLis size={28} style={{ margin: "0 auto 12px" }} />
+          <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 8 }}>SIGNED OUT</div>
+          <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", marginBottom: 18, lineHeight: 1.55 }}>
+            Sign in to edit your seal. Only the bearer of the name can carve it.
+          </div>
+          <button onClick={login} style={btnDark}>SIGN IN</button>
+        </Cartouche>
+      </Shell>
+    );
+  }
+  if (loading) {
+    return <Shell><Loader text="opening your shelf…" /></Shell>;
+  }
+  if (!myName?.claimed) {
+    return (
+      <Shell>
+        <Cartouche padding={32} style={{ textAlign: "center", maxWidth: 460 }}>
+          <FleurDeLis size={28} style={{ margin: "0 auto 12px" }} />
+          <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 8 }}>NO NAME ON THIS WALLET</div>
+          <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", marginBottom: 18, lineHeight: 1.55 }}>
+            Wallet {address?.slice(0, 6)}…{address?.slice(-4)} hasn't yet claimed a name in Praga. The seal is empty.
+          </div>
+          <a href="/" style={btnDark}>CLAIM A NAME</a>
+        </Cartouche>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell>
+      <div style={{ maxWidth: 720, width: "100%" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.4em", color: "var(--vermilion)", marginBottom: 6 }}>{t("edit.kicker")}</div>
+          <div className="t-display" style={{ fontSize: 36, letterSpacing: "0.04em" }}>{myName.ens}</div>
+          <div className="hr-double" style={{ width: 64, margin: "12px auto 0" }} />
+        </div>
+
+        <Cartouche padding={28} style={{ width: "100%" }}>
+          <Field label={t("edit.fields.displayName")}>
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value.slice(0, 60))}
+              style={inputStyle}
+              placeholder="how you sign your work"
+            />
+          </Field>
+
+          <Field label={t("edit.fields.bio")}>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 900))}
+              style={{ ...inputStyle, minHeight: 110, resize: "vertical", fontFamily: "var(--body)", fontStyle: "italic" }}
+              placeholder="A paragraph in your hand. Where you work, what you do, how you keep your tools."
+            />
+            <div className="t-mono" style={{ fontSize: 10, color: "var(--ink-50)", textAlign: "right", marginTop: 4 }}>{bio.length} / 900</div>
+          </Field>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Field label={t("edit.fields.location")}>
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value.slice(0, 60))}
+                style={inputStyle}
+                placeholder="Žižkov · Praha"
+              />
+            </Field>
+            <Field label={t("edit.fields.avatar")}>
+              <input
+                value={avatar}
+                onChange={(e) => setAvatar(e.target.value.slice(0, 400))}
+                style={inputStyle}
+                placeholder="https://…"
+              />
+            </Field>
+          </div>
+
+          <div className="hr-gilded" style={{ margin: "24px 0" }} />
+
+          <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>{t("edit.skills.kicker")}</div>
+          <div className="t-display" style={{ fontSize: 22, letterSpacing: "0.04em", marginBottom: 12 }}>{t("edit.skills.title")}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {skills.map((s, i) => (
+              <SkillRow
+                key={i}
+                skill={s}
+                onChange={(next) =>
+                  setSkills((curr) => curr.map((x, j) => (j === i ? next : x)))
+                }
+                onRemove={() => setSkills((curr) => curr.filter((_, j) => j !== i))}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setSkills((curr) => [...curr, { kind: "forge", name: "", price: "" }])}
+              style={{ marginTop: 4, padding: "10px 14px", background: "transparent", border: "0.5px dashed var(--gilded)", fontFamily: "var(--display)", fontSize: 11, letterSpacing: "0.3em", color: "var(--ink)", cursor: "pointer" }}
+            >
+              {t("edit.skills.add")}
+            </button>
+          </div>
+
+          <div className="hr-gilded" style={{ margin: "28px 0 18px" }} />
+
+          <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>{t("edit.stealth.kicker")}</div>
+          <div className="t-display" style={{ fontSize: 22, letterSpacing: "0.04em", marginBottom: 6 }}>{t("edit.stealth.title")}</div>
+          <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", lineHeight: 1.55, marginBottom: 12 }}>
+            {t("edit.stealth.body")}
+          </div>
+          {stealthMeta ? (
+            <div style={{ padding: "12px 14px", border: "0.5px solid var(--gilded)", background: "var(--bone)" }}>
+              <div className="t-mono" style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--verdigris)", marginBottom: 6 }}>{t("edit.stealth.sealed")}</div>
+              <div className="t-mono" style={{ fontSize: 11, color: "var(--ink)", wordBreak: "break-all" }}>{stealthMeta}</div>
+              <button
+                type="button"
+                onClick={onSealStealth}
+                disabled={sealing}
+                className="t-display"
+                style={{ marginTop: 10, fontSize: 10, letterSpacing: "0.25em", color: "var(--ink-70)", background: "transparent", border: "none", cursor: sealing ? "wait" : "pointer", padding: 0 }}
+              >
+                {sealing ? "…" : t("edit.stealth.reseal")}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onSealStealth}
+              disabled={sealing}
+              style={{ ...btnDark, padding: "10px 18px", fontSize: 11, opacity: sealing ? 0.6 : 1, cursor: sealing ? "wait" : "pointer" }}
+            >
+              {sealing ? "…" : t("edit.stealth.generate")}
+            </button>
+          )}
+
+          <div className="hr-gilded" style={{ margin: "20px 0 18px" }} />
+
+          <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>YOUR PERSONAL SITE</div>
+          <div className="t-display" style={{ fontSize: 22, letterSpacing: "0.04em", marginBottom: 6 }}>Served from Swarm</div>
+          <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", lineHeight: 1.55, marginBottom: 12 }}>
+            Each save publishes a fresh static page to Swarm. The bzz reference is written to your subname's <code className="t-mono">contenthash</code>, so <code className="t-mono">{myName.ens}.limo</code> resolves to a Swarm-hosted page anyone can verify.
+          </div>
+          {publishedAt ? (
+            <div style={{ padding: "10px 12px", border: "0.5px solid var(--gilded)", background: "var(--bone)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <div className="t-mono" style={{ fontSize: 11, color: "var(--verdigris)" }}>✓ {publishing ? "republishing…" : "published to Swarm"}</div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <a href={publishedAt.limo} target="_blank" rel="noreferrer" className="t-mono" style={{ fontSize: 11, color: "var(--ink)" }}>{myName.ens}.limo ↗</a>
+                <a href={publishedAt.bzz} target="_blank" rel="noreferrer" className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)" }}>bzz ↗</a>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={publishToSwarm}
+              disabled={publishing || !myName.label}
+              style={{ ...btnDark, padding: "10px 18px", fontSize: 11, opacity: publishing ? 0.6 : 1, cursor: publishing ? "wait" : "pointer" }}
+            >
+              {publishing ? "PUBLISHING TO SWARM…" : "PUBLISH TO SWARM"}
+            </button>
+          )}
+
+          <div className="hr-gilded" style={{ margin: "20px 0 18px" }} />
+
+          {err && (
+            <div className="t-italic" style={{ fontSize: 13, color: "var(--vermilion)", textAlign: "center", marginBottom: 12 }}>
+              {err}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave}
+            style={{ ...btnDark, width: "100%", opacity: canSave ? 1 : 0.5, cursor: canSave ? "pointer" : "not-allowed" }}
+          >
+            {saving ? "…" : t("edit.button.save")}
+          </button>
+          <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-70)", textAlign: "center", marginTop: 10 }}>
+            Your edits write text records under {myName.ens} on Sepolia ENS.
+          </div>
+        </Cartouche>
+      </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="parchment-surface" style={{ width: "100%", minHeight: "100vh", padding: "32px 20px 48px", display: "flex", justifyContent: "center" }}>
+      {children}
+    </div>
+  );
+}
+
+function Loader({ text }: { text: string }) {
+  return (
+    <div className="t-mono" style={{ fontSize: 12, color: "var(--ink-70)", letterSpacing: "0.1em", paddingTop: 80 }}>{text}</div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div className="t-mono" style={{ fontSize: 9, letterSpacing: "0.25em", color: "var(--gilded-soft)", marginBottom: 4 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function SkillRow({ skill, onChange, onRemove }: { skill: Skill; onChange: (s: Skill) => void; onRemove: () => void }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 140px auto", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "0.5px solid var(--gilded)" }}>
+      <select
+        value={skill.kind}
+        onChange={(e) => onChange({ ...skill, kind: e.target.value as SigilKind })}
+        style={{ ...inputStyle, padding: "6px 8px", width: 64 }}
+      >
+        {KIND_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
+      </select>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <AlchemicalSigil kind={skill.kind} size={24} />
+        <input
+          value={skill.name}
+          onChange={(e) => onChange({ ...skill, name: e.target.value.slice(0, 80) })}
+          style={{ ...inputStyle, padding: "6px 8px" }}
+          placeholder="bicycles, knives, small electrics"
+        />
+      </div>
+      <input
+        value={skill.price}
+        onChange={(e) => onChange({ ...skill, price: e.target.value.slice(0, 40) })}
+        style={{ ...inputStyle, padding: "6px 8px", textAlign: "right" }}
+        placeholder="from 200 Kč"
+      />
+      <button type="button" onClick={onRemove} className="t-mono" style={{ fontSize: 11, color: "var(--vermilion)", background: "transparent", border: "none", cursor: "pointer", padding: "4px 8px" }}>×</button>
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  background: "transparent",
+  border: "0.5px solid var(--gilded)",
+  borderRadius: 0,
+  fontFamily: "var(--body)",
+  fontSize: 15,
+  color: "var(--ink)",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const btnDark: React.CSSProperties = {
+  display: "inline-block",
+  padding: "12px 22px",
+  background: "var(--ink)",
+  color: "var(--parchment)",
+  fontFamily: "var(--display)",
+  fontSize: 12,
+  letterSpacing: "0.3em",
+  border: "none",
+  cursor: "pointer",
+  textDecoration: "none",
+};

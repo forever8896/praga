@@ -1,0 +1,82 @@
+// PragaEscrow client helpers — derive a deterministic taskId from a thread
+// pair, read on-chain task state, and expose an ABI for fund/accept/deliver/
+// release calls.
+import { createPublicClient, http, keccak256, encodePacked } from "viem";
+import { baseSepolia } from "viem/chains";
+import { env } from "./env";
+
+export const ESCROW_ABI = [
+  { type: "function", name: "fund", stateMutability: "payable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "worker", type: "address" }], outputs: [] },
+  { type: "function", name: "accept", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "stealthRecipient", type: "address" }, { name: "ephemeralPubKey", type: "bytes" }, { name: "viewTag", type: "bytes1" }], outputs: [] },
+  { type: "function", name: "deliver", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }], outputs: [] },
+  { type: "function", name: "release", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "rating", type: "uint8" }], outputs: [] },
+  { type: "function", name: "refund", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }], outputs: [] },
+  {
+    type: "function",
+    name: "tasks",
+    stateMutability: "view",
+    inputs: [{ name: "taskId", type: "bytes32" }],
+    outputs: [
+      { name: "funder", type: "address" },
+      { name: "worker", type: "address" },
+      { name: "amount", type: "uint96" },
+      { name: "deliveredAt", type: "uint40" },
+      { name: "phase", type: "uint8" },
+      { name: "stealthRecipient", type: "address" },
+      { name: "ephemeralPubKey", type: "bytes" },
+      { name: "viewTag", type: "bytes1" },
+    ],
+  },
+] as const;
+
+export type Phase = 0 | 1 | 2 | 3 | 4 | 5;
+export const PHASE_LABELS: Record<Phase, string> = {
+  0: "None",
+  1: "Nigredo · Funded",
+  2: "Albedo · In progress",
+  3: "Citrinitas · Delivered",
+  4: "Rubedo · Released",
+  5: "Refunded",
+};
+
+export interface OnchainTask {
+  funder: `0x${string}`;
+  worker: `0x${string}`;
+  amount: bigint;
+  deliveredAt: number;
+  phase: Phase;
+  stealthRecipient: `0x${string}`;
+  ephemeralPubKey: `0x${string}`;
+  viewTag: `0x${string}`;
+}
+
+/** Deterministic taskId for a thread between two ENS-bound addresses.
+ *  Both sides of the conversation compute the same id regardless of who funds. */
+export function deriveTaskId(addrA: `0x${string}`, addrB: `0x${string}`, salt = "praga.thread.v1"): `0x${string}` {
+  const [first, second] = [addrA.toLowerCase() as `0x${string}`, addrB.toLowerCase() as `0x${string}`].sort();
+  return keccak256(encodePacked(["address", "address", "string"], [first, second, salt]));
+}
+
+const escrowClient = () =>
+  createPublicClient({ chain: baseSepolia, transport: http(env.baseSepoliaRpcUrl) });
+
+export async function loadTask(taskId: `0x${string}`): Promise<OnchainTask | null> {
+  const escrow = env.escrowAddress;
+  if (!escrow) return null;
+  try {
+    const result = await escrowClient().readContract({
+      address: escrow as `0x${string}`,
+      abi: ESCROW_ABI,
+      functionName: "tasks",
+      args: [taskId],
+    });
+    const [funder, worker, amount, deliveredAt, phase, stealthRecipient, ephemeralPubKey, viewTag] = result as readonly [
+      `0x${string}`, `0x${string}`, bigint, number, number, `0x${string}`, `0x${string}`, `0x${string}`,
+    ];
+    return {
+      funder, worker, amount, deliveredAt, phase: phase as Phase, stealthRecipient, ephemeralPubKey, viewTag,
+    };
+  } catch {
+    return null;
+  }
+}
