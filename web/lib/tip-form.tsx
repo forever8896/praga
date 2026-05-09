@@ -3,7 +3,14 @@
 // The tip flow: read recipient's ERC-5564 meta-address, derive a fresh stealth
 // address client-side, send ETH via PragueConnectTip on Base Sepolia. Single tx —
 // transfer + announce atomically.
-import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
+//
+// If the sender has an inviter (their own NameStone record carries a
+// `sealed-by` text record pointing at another subname), the tip routes through
+// `tipWithReferral` instead: 95% to the recipient's stealth address, 5% to the
+// inviter's stealth address as a finder's mark. Both legs ERC-5564-announced
+// in the same tx. The inviter's address is derived from their public
+// stealth-meta-address text record. No on-chain link to either name.
+import { usePrivy, useSendTransaction, useWallets, useIdentityToken } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, WaxSeal } from "./ornaments";
@@ -22,6 +29,13 @@ interface Recipient {
   location: string;
 }
 
+interface InviterContext {
+  label: string;
+  ens: string;
+  display: string;
+  stealthMeta: string;
+}
+
 const TIP_ABI = [
   {
     type: "function",
@@ -35,10 +49,26 @@ const TIP_ABI = [
     ],
     outputs: [],
   },
+  {
+    type: "function",
+    name: "tipWithReferral",
+    stateMutability: "payable",
+    inputs: [
+      { name: "recipientStealth", type: "address" },
+      { name: "recipientEphPubKey", type: "bytes" },
+      { name: "recipientViewTag", type: "bytes1" },
+      { name: "inviterStealth", type: "address" },
+      { name: "inviterEphPubKey", type: "bytes" },
+      { name: "inviterViewTag", type: "bytes1" },
+      { name: "memo", type: "string" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 export function TipForm({ recipient }: { recipient: Recipient }) {
   const { ready, authenticated, login, user } = usePrivy();
+  const { identityToken } = useIdentityToken();
   const t = useT();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
@@ -49,10 +79,12 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [balanceEth, setBalanceEth] = useState<number | null>(null);
+  const [inviter, setInviter] = useState<InviterContext | null>(null);
 
   const myAddress = user?.wallet?.address as `0x${string}` | undefined;
   const tipAddr = env.tipAddress;
   const hasStealth = recipient.stealthMeta.startsWith("st:eth:");
+  const inviterUsable = !!inviter && inviter.stealthMeta.startsWith("st:eth:") && inviter.label !== recipient.label;
 
   useEffect(() => {
     if (!authenticated || !myAddress) return;
@@ -75,6 +107,31 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
     };
   }, [authenticated, myAddress]);
 
+  // Fetch sender's inviter context once authenticated. The 5% finder's mark
+  // routes there if it exists and the inviter has a stealth route.
+  useEffect(() => {
+    if (!authenticated || !identityToken) {
+      setInviter(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/my-name", {
+          headers: { Authorization: `Bearer ${identityToken}` },
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { inviter?: InviterContext | null };
+        if (!cancelled && data.inviter) setInviter(data.inviter);
+      } catch {
+        /* leave null */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, identityToken]);
+
   const requiredEth = Number.parseFloat(amountEth || "0") + 0.0001; // amount + tiny gas buffer
   const insufficientFunds = balanceEth !== null && balanceEth < requiredEth;
   const canTip = ready && authenticated && hasStealth && !sending && tipAddr && !insufficientFunds;
@@ -88,28 +145,47 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
       let stealthRecipient: `0x${string}`;
       let ephemeralPubKey: `0x${string}`;
       let viewTag: `0x${string}`;
-      let usingStealth = false;
 
       if (hasStealth) {
         const out = paymentAddress(recipient.stealthMeta);
         stealthRecipient = out.stealthAddress;
         ephemeralPubKey = out.ephemeralPublicKey;
         viewTag = out.viewTag;
-        usingStealth = true;
       } else {
         // Fallback: tip directly to the recipient's known address. No privacy.
         stealthRecipient = recipient.address;
         ephemeralPubKey = "0x" as Hex;
         viewTag = "0x00" as Hex;
       }
-      void usingStealth;
 
-      // 2. Encode PragueConnectTip.tip(stealth, ephem, viewTag, memo) call.
-      const data = encodeFunctionData({
-        abi: TIP_ABI,
-        functionName: "tip",
-        args: [stealthRecipient, ephemeralPubKey, viewTag, memo.slice(0, 80)],
-      });
+      // 2. Encode the contract call. If the sender has an inviter, atomic 95/5
+      //    split via tipWithReferral; else single-leg tip. The inviter's
+      //    stealth address is derived independently from their public meta.
+      const memoTrim = memo.slice(0, 80);
+      const useReferral = inviterUsable && hasStealth;
+      let data: `0x${string}`;
+      if (useReferral && inviter) {
+        const inv = paymentAddress(inviter.stealthMeta);
+        data = encodeFunctionData({
+          abi: TIP_ABI,
+          functionName: "tipWithReferral",
+          args: [
+            stealthRecipient,
+            ephemeralPubKey,
+            viewTag,
+            inv.stealthAddress,
+            inv.ephemeralPublicKey,
+            inv.viewTag,
+            memoTrim,
+          ],
+        });
+      } else {
+        data = encodeFunctionData({
+          abi: TIP_ABI,
+          functionName: "tip",
+          args: [stealthRecipient, ephemeralPubKey, viewTag, memoTrim],
+        });
+      }
 
       const value = parseEther(amountEth || "0");
       if (value === BigInt(0)) {
@@ -153,7 +229,7 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
         </div>
 
         <Cartouche padding={28} style={{ width: "100%" }}>
-          <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16 }}>
             <PortraitRoundel size={80} />
             <div style={{ flex: 1 }}>
               <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", lineHeight: 1.55 }}>
@@ -163,6 +239,31 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
               </div>
             </div>
           </div>
+
+          {inviterUsable && inviter && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                padding: "10px 14px",
+                marginBottom: 16,
+                background: "rgba(184, 158, 78, 0.10)",
+                border: "0.5px solid var(--gilded)",
+                borderLeft: "2px solid var(--vermilion)",
+              }}
+            >
+              <FleurDeLis size={18} stroke="var(--vermilion)" style={{ flex: "0 0 auto", marginTop: 2 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--vermilion)", textTransform: "uppercase" }}>
+                  Finder&apos;s mark · 5%
+                </div>
+                <div className="t-italic" style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.5, marginTop: 2 }}>
+                  A small share returns to <span className="t-mono" style={{ fontSize: 12 }}>{inviter.ens}</span> — the seal that introduced you here. Both legs route to fresh stealth addresses, atomic in one tx.
+                </div>
+              </div>
+            </div>
+          )}
 
           {!tipAddr && (
             <div className="t-italic" style={{ fontSize: 13, color: "var(--vermilion)", padding: "10px 14px", background: "var(--bone)", border: "0.5px solid var(--vermilion)", marginBottom: 14 }}>

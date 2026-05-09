@@ -22,5 +22,7 @@ export async function GET(req: Request) {
     available: false,
     name: `${raw}.pragueconnect.eth`,
     address: existing.address,
+    display: existing.text_records?.name ?? raw.charAt(0).toUpperCase() + raw.slice(1),
+    record: { text_records: existing.text_records ?? {} },
   });
 }

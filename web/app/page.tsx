@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { Cartouche, FleurDeLis } from "@/lib/ornaments";
 import { OnboardingForm } from "@/lib/onboarding-form";
-import { InviterCapture } from "@/lib/inheritance-tab";
+import { InviterCapture, InviterAcknowledgement } from "@/lib/inheritance-tab";
 import { useT } from "@/lib/i18n";
 
 function PragueSilhouette({ opacity = 0.18 }: { opacity?: number }) {
@@ -97,7 +97,9 @@ function MobileOnboarding() {
         <div className="hr-double" style={{ width: 48, marginTop: 16, marginBottom: 28 }} />
 
         <div className="t-display" style={{ fontSize: 30, letterSpacing: "0.05em", lineHeight: 1.05, marginBottom: 14 }}>{t("home.headline.line1")}<br />{t("home.headline.italic")} {t("home.headline.line2")}</div>
-        <div className="t-italic" style={{ fontSize: 16, color: "var(--ink-70)", lineHeight: 1.5, maxWidth: 280, marginBottom: 28 }}>{t("home.subhead.mobile")}</div>
+        <div className="t-italic" style={{ fontSize: 16, color: "var(--ink-70)", lineHeight: 1.5, maxWidth: 280, marginBottom: 22 }}>{t("home.subhead.mobile")}</div>
+
+        <InviterAcknowledgement />
 
         <OnboardingForm size="mobile" />
 
@@ -140,6 +142,7 @@ function DesktopOnboarding() {
 
         <Cartouche tone="bone" padding={48}>
           <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--vermilion)", textAlign: "center", marginBottom: 18 }}>{t("home.hero.kicker")}</div>
+          <InviterAcknowledgement />
           <OnboardingForm size="desktop" />
         </Cartouche>
       </div>

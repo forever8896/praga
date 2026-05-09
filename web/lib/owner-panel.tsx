@@ -45,7 +45,16 @@ export function OwnerPanel({ ownerAddress, hasBio, hasOffers, hasStealth }: Prop
   if (remaining.length === 0) return null;
 
   return (
-    <div style={{ marginTop: 18, padding: "14px 16px", border: "0.5px solid var(--gilded)", background: "var(--bone)" }}>
+    <div
+      style={{
+        marginTop: 18,
+        padding: "14px 16px",
+        border: "0.5px solid var(--gilded)",
+        borderLeft: "2px solid var(--vermilion)",
+        background: "var(--bone)",
+        animation: "pc-narration-fade 600ms cubic-bezier(0.32, 0.72, 0.24, 1)",
+      }}
+    >
       <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>
         {t("owner.kicker", "WELCOME — YOUR NEXT STEPS")}
       </div>

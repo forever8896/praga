@@ -14,6 +14,7 @@ import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
 import { decodeOffers } from "@/lib/offers";
 import { OwnerPanel } from "@/lib/owner-panel";
 import { InheritanceTab } from "@/lib/inheritance-tab";
+import { ReciprocateCartouche } from "@/lib/reciprocate-cartouche";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -93,6 +94,9 @@ export default async function ProfilePage({
       <DesktopProfile profile={profile} />
       {profile.isClaimed && (
         <InheritanceTab inviterLabel={profile.label} inviterDisplay={profile.display} />
+      )}
+      {profile.isClaimed && profile.sealedBy && (
+        <ReciprocateCartouche profileAddress={profile.address} />
       )}
     </>
   );

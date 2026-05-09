@@ -67,6 +67,84 @@ export function clearInviter() {
   } catch {}
 }
 
+/// Banner shown above the onboarding form when a visitor arrives via
+/// ?invitedBy=lucia. Acknowledges the inviter by name so the inheritance
+/// loop is felt at the moment of claim.
+export function InviterAcknowledgement() {
+  const [inviter, setInviter] = useState<{ label: string; display: string; ens: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const stored = readInviter();
+      const label = (params.get("invitedBy") ?? stored ?? "").toLowerCase().trim();
+      if (!label || !/^[a-z0-9-]{1,32}$/.test(label)) return;
+      try {
+        const res = await fetch(`/api/check-name?name=${encodeURIComponent(label)}`);
+        const data = (await res.json()) as {
+          available?: boolean;
+          display?: string;
+          record?: { text_records?: Record<string, string> };
+        };
+        if (cancelled) return;
+        // If available === true, the label has no record — bad inviter, skip
+        if (data.available !== false) return;
+        const display = data.display ?? label.charAt(0).toUpperCase() + label.slice(1);
+        setInviter({ label, display, ens: `${label}.pragueconnect.eth` });
+      } catch {
+        /* leave hidden */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!inviter) return null;
+  const firstName = inviter.display.split(" ")[0];
+
+  return (
+    <div
+      role="note"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 16px",
+        margin: "0 auto 18px",
+        maxWidth: 360,
+        background: "rgba(184, 158, 78, 0.10)",
+        border: "0.5px solid var(--gilded)",
+        borderLeft: "2px solid var(--vermilion)",
+        animation: "pc-narration-fade 480ms ease-out",
+      }}
+    >
+      <FleurDeLis size={18} stroke="var(--vermilion)" style={{ flex: "0 0 auto" }} />
+      <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+        <div
+          className="t-display"
+          style={{
+            fontSize: 9,
+            letterSpacing: "0.35em",
+            color: "var(--vermilion)",
+            textTransform: "uppercase",
+          }}
+        >
+          AN INVITATION
+        </div>
+        <div
+          className="t-italic"
+          style={{ fontSize: 13, lineHeight: 1.45, color: "var(--ink)", marginTop: 2 }}
+        >
+          <strong style={{ fontStyle: "normal" }}>{firstName}</strong> led you to this seal. Inscribe your own to thank back.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function InheritanceTab({
   inviterLabel,
   inviterDisplay,
