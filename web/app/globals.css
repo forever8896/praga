@@ -103,42 +103,56 @@ a { color: inherit; text-decoration: none; }
  * Tunable by --castle-* CSS vars below. */
 .page-castle {
   position: relative;
-  background-color: #4a130d;
+  background-color: #7a2218;
   background-image:
     /* 1. fabric noise — tiny grain so the velvet isn't plastic */
     url("/velvet-noise.svg"),
     /* 2. golden fleur damask, embroidered into the cloth */
     url("/fleur-tile.svg"),
-    /* 3. PLEATS — repeating vertical bands simulating curved fabric:
-     *      | shadow ↘ ridge ↗ shadow | shadow ↘ ridge ↗ shadow | ...
-     *    Each 110px-wide pleat has a deep shadow at its boundary and
-     *    a bright ridge at its center. Hard stops on the valleys give
-     *    the crisp 3-D edge real curtains have. */
+    /* 3. PLEATS — 3 different-width panels per 405px cycle so the eye
+     *    never catches the repeat. Widths 110 / 135 / 160. Each panel
+     *    has its own ridge intensity so adjacent pleats look hand-hung
+     *    instead of stamped from the same plate. */
     repeating-linear-gradient(
       90deg,
-      rgba(0, 0, 0, 0.42) 0px,
-      rgba(0, 0, 0, 0.32) 4px,
-      rgba(0, 0, 0, 0.10) 22px,
-      rgba(255, 220, 180, 0.04) 42px,
-      rgba(255, 230, 190, 0.10) 55px,
-      rgba(255, 220, 180, 0.04) 68px,
-      rgba(0, 0, 0, 0.10) 88px,
-      rgba(0, 0, 0, 0.32) 106px,
-      rgba(0, 0, 0, 0.42) 110px
+      /* panel A — 110px, brighter ridge */
+      rgba(0, 0, 0, 0.30) 0px,
+      rgba(0, 0, 0, 0.20) 4px,
+      rgba(0, 0, 0, 0.05) 30px,
+      rgba(255, 235, 200, 0.18) 55px,
+      rgba(0, 0, 0, 0.05) 80px,
+      rgba(0, 0, 0, 0.20) 106px,
+      rgba(0, 0, 0, 0.30) 110px,
+      /* panel B — 135px, dimmer ridge (in a fold's "back" curve) */
+      rgba(0, 0, 0, 0.32) 110px,
+      rgba(0, 0, 0, 0.22) 116px,
+      rgba(0, 0, 0, 0.08) 145px,
+      rgba(255, 220, 180, 0.10) 178px,
+      rgba(0, 0, 0, 0.08) 210px,
+      rgba(0, 0, 0, 0.22) 240px,
+      rgba(0, 0, 0, 0.32) 245px,
+      /* panel C — 160px, brightest ridge (in the foreground swell) */
+      rgba(0, 0, 0, 0.28) 245px,
+      rgba(0, 0, 0, 0.18) 252px,
+      rgba(0, 0, 0, 0.04) 290px,
+      rgba(255, 240, 210, 0.22) 325px,
+      rgba(0, 0, 0, 0.04) 360px,
+      rgba(0, 0, 0, 0.18) 398px,
+      rgba(0, 0, 0, 0.28) 405px
     ),
-    /* 4. global wash — settles the damask into the velvet base */
+    /* 4. global red wash — gentler now that the base is lighter */
     linear-gradient(
       180deg,
-      rgba(60, 14, 10, 0.35),
-      rgba(35, 8, 6, 0.55)
+      rgba(120, 30, 22, 0.20),
+      rgba(70, 16, 12, 0.32)
     ),
     /* 5. candlelit vignette — corners drawn into shadow */
     radial-gradient(
       ellipse at center,
-      rgba(20, 6, 4, 0) 35%,
-      rgba(10, 3, 2, 0.65) 100%
+      rgba(20, 6, 4, 0) 38%,
+      rgba(10, 3, 2, 0.55) 100%
     );
-  background-size: 240px 240px, 180px 220px, 110px auto, auto, auto;
+  background-size: 240px 240px, 180px 220px, 405px auto, auto, auto;
   background-repeat: repeat, repeat, repeat, no-repeat, no-repeat;
   background-attachment: fixed, fixed, fixed, fixed, fixed;
   background-blend-mode: overlay, normal, normal, normal, normal;
@@ -172,31 +186,34 @@ a { color: inherit; text-decoration: none; }
   z-index: 1;
 }
 
-/* Hero copy on the velvet — keep the soft shadow so even when the sash
- * isn't there (mid-page text) the gold fleurs behind don't compete. */
+/* White hero text on velvet — strong but soft shadow so the gold fleurs
+ * behind never dim the title. */
 .page-castle h1.display {
-  text-shadow: 0 2px 14px rgba(10, 3, 2, 0.85), 0 0 30px rgba(10, 3, 2, 0.55);
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.8),
+    0 4px 22px rgba(0, 0, 0, 0.55),
+    0 0 1px rgba(0, 0, 0, 0.9);
 }
 .page-castle .container-tight > p,
 .page-castle .container-tight > .italic {
-  text-shadow: 0 1px 8px rgba(10, 3, 2, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 2px 10px rgba(0, 0, 0, 0.55);
 }
 
-/* Inside the castle, hero text sits directly on the velvet — invert to a
- * warm-cream ink so titles and italics read against the dark backdrop.
+/* Inside the castle, hero text sits directly on the velvet — pure white
+ * so titles and italics cut cleanly through the gold-and-burgundy noise.
  * Cartouches keep their parchment fill and dark ink, untouched. */
 .page-castle h1,
 .page-castle h2,
 .page-castle p,
 .page-castle .display,
 .page-castle .italic:not(.cartouche .italic):not(.cartouche-parchment .italic) {
-  color: #f4ecd8;
+  color: #ffffff;
 }
-.page-castle .mono-caps { color: rgba(244, 236, 216, 0.85); }
+.page-castle .mono-caps { color: rgba(255, 255, 255, 0.92); }
 .page-castle hr.hr-double,
-.page-castle hr.hr-gilded { border-color: rgba(215, 181, 103, 0.6); }
-.page-castle .btn-text { color: rgba(244, 236, 216, 0.7); }
-.page-castle .btn-text:hover { color: #f4ecd8; }
+.page-castle hr.hr-gilded { border-color: rgba(220, 188, 110, 0.7); }
+.page-castle .btn-text { color: rgba(255, 255, 255, 0.78); }
+.page-castle .btn-text:hover { color: #ffffff; }
 
 /* ============== Type primitives ============== */
 
