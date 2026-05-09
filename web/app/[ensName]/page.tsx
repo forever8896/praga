@@ -12,6 +12,7 @@ import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
 import { decodeOffers } from "@/lib/offers";
 import { OwnerPanel } from "@/lib/owner-panel";
 import { MyInvitesCartouche } from "@/lib/my-invites-cartouche";
+import { ProfileHire } from "@/lib/profile-hire";
 import { InheritanceTab } from "@/lib/inheritance-tab";
 import { ReciprocateCartouche } from "@/lib/reciprocate-cartouche";
 import Link from "next/link";
@@ -29,6 +30,7 @@ interface ProfileData {
   isClaimed: boolean;
   hasStealth: boolean;
   hasOffers: boolean;
+  stealthMeta: string | null;
   receiptsSent: TipReceipt[];
   receiptsReceived: TipReceipt[];
   /** Swarm bzz reference (32-byte hex) decoded from the subname's contenthash, if any. */
@@ -52,6 +54,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       isClaimed: false,
       hasStealth: false,
       hasOffers: false,
+      stealthMeta: null,
       receiptsSent: [],
       receiptsReceived: [],
       swarmRef: null,
@@ -73,6 +76,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     isClaimed: true,
     hasStealth: !!record.text_records?.["stealth-meta-address"],
     hasOffers: decodeOffers(record.text_records?.offers).length > 0,
+    stealthMeta: record.text_records?.["stealth-meta-address"] ?? null,
     receiptsSent,
     receiptsReceived,
     swarmRef: extractSwarmRef(record.contenthash),
@@ -265,6 +269,12 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
 
       <MyInvitesCartouche ownerAddress={profile.address} />
 
+      <ProfileHire
+        ownerAddress={profile.address}
+        ownerEns={profile.ens}
+        ownerStealthMeta={profile.stealthMeta}
+      />
+
       <div style={{ marginTop: 24 }}>
         <div className="t-italic" style={{ fontSize: 16, lineHeight: 1.55, color: "var(--ink)" }}>{bio}</div>
       </div>
@@ -354,6 +364,11 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
                 hasStealth={profile.hasStealth}
               />
               <MyInvitesCartouche ownerAddress={profile.address} />
+              <ProfileHire
+                ownerAddress={profile.address}
+                ownerEns={profile.ens}
+                ownerStealthMeta={profile.stealthMeta}
+              />
             </div>
           </div>
 

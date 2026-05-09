@@ -2,7 +2,7 @@
 // pair, read on-chain task state, and expose an ABI for fund/accept/deliver/
 // release calls.
 import { createPublicClient, http, keccak256, encodePacked } from "viem";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { env } from "./env";
 
 export const ESCROW_ABI = [
@@ -57,8 +57,13 @@ export function deriveTaskId(addrA: `0x${string}`, addrB: `0x${string}`, salt = 
   return keccak256(encodePacked(["address", "address", "string"], [first, second, salt]));
 }
 
-const escrowClient = () =>
-  createPublicClient({ chain: baseSepolia, transport: http(env.baseSepoliaRpcUrl) });
+const escrowClient = () => {
+  const onMainnet = env.defaultChainId === base.id;
+  return createPublicClient({
+    chain: onMainnet ? base : baseSepolia,
+    transport: http(onMainnet ? env.baseRpcUrl : env.baseSepoliaRpcUrl),
+  });
+};
 
 export async function loadTask(taskId: `0x${string}`): Promise<OnchainTask | null> {
   const escrow = env.escrowAddress;

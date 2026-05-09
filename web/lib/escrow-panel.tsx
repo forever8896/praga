@@ -57,7 +57,8 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("https://sepolia.base.org", {
+        const rpc = env.defaultChainId === 8453 ? env.baseRpcUrl : env.baseSepoliaRpcUrl;
+        const res = await fetch(rpc, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [myAddress, "latest"] }),
@@ -266,12 +267,12 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
 
       {balanceEth !== null && phase === 0 && balanceEth < Number.parseFloat(amountEth || "0") + 0.0001 && (
         <div className="t-italic" style={{ fontSize: 11, color: "var(--vermilion)", marginTop: 8 }}>
-          your wallet has {balanceEth.toFixed(5)} ETH — <a href="https://www.alchemy.com/faucets/base-sepolia" target="_blank" rel="noreferrer" style={{ color: "var(--vermilion)" }}>get testnet ETH ↗</a>
+          your wallet has {balanceEth.toFixed(5)} ETH — top up to fund this seal.
         </div>
       )}
 
       <div className="t-mono" style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--ink-50)", marginTop: 8 }}>
-        ESCROW · {env.escrowAddress?.slice(0, 6)}…{env.escrowAddress?.slice(-4)} · BASE SEPOLIA
+        ESCROW · {env.escrowAddress?.slice(0, 6)}…{env.escrowAddress?.slice(-4)} · {env.defaultChainId === 8453 ? "BASE" : "BASE SEPOLIA"}
       </div>
     </div>
   );
