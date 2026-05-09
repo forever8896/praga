@@ -2,7 +2,8 @@
 
 // The real compose-an-offer form. Loads the user's existing `offers` record,
 // lets them add a new one, posts back via /api/update-profile.
-import { usePrivy, useIdentityToken } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAccessToken } from "./use-access-token";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -36,7 +37,7 @@ const CATEGORIES: Array<{ kind: SigilKind; label: string }> = [
 
 export function ComposeForm() {
   const { ready, authenticated, login } = usePrivy();
-  const { identityToken } = useIdentityToken();
+  const { accessToken: identityToken } = useAccessToken();
   const t = useT();
   const router = useRouter();
 

@@ -5,7 +5,7 @@
 // There is no duplicate input above; the status sits in mono-caps beneath the
 // parchment, and a single SEAL button anchors the bottom.
 
-import { usePrivy, useSignMessage, useIdentityToken } from "@privy-io/react-auth";
+import { usePrivy, useSignMessage, getAccessToken } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
@@ -55,7 +55,6 @@ interface ClaimedInviter {
 export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" }) {
   const { login, authenticated, user, ready, logout } = usePrivy();
   const { signMessage } = useSignMessage();
-  const { identityToken } = useIdentityToken();
   const t = useT();
   const { lang } = useI18n();
   const [name, setName] = useState("");
@@ -91,16 +90,22 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
   // a page refresh after claiming would re-render the inscription input as if
   // they were a fresh visitor.
   useEffect(() => {
-    setAuthDebug(`ready=${ready} auth=${authenticated} idTok=${identityToken ? "yes" : "no"}`);
+    setAuthDebug(`ready=${ready} auth=${authenticated}`);
     if (!ready) return;
     if (!authenticated) return;
     if (showSealedBeat) return;
-    if (!identityToken) return;
     let cancelled = false;
     (async () => {
       try {
+        const tok = await getAccessToken();
+        if (cancelled) return;
+        if (!tok) {
+          setAuthDebug("no-access-token");
+          return;
+        }
+        setAuthDebug("auth ok, calling /api/my-name…");
         const res = await fetch("/api/my-name", {
-          headers: { Authorization: `Bearer ${identityToken}` },
+          headers: { Authorization: `Bearer ${tok}` },
         });
         const data = await res.json();
         if (cancelled) return;
@@ -120,7 +125,7 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
     return () => {
       cancelled = true;
     };
-  }, [ready, authenticated, identityToken, router, showSealedBeat]);
+  }, [ready, authenticated, router, showSealedBeat]);
 
   // Debounced availability check via NameStone whenever `name` changes.
   useEffect(() => {
@@ -218,11 +223,7 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
         setClaimState("sealing-stealth");
         const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
         const keys = derivePragueConnectKeys(signature as `0x${string}`);
-        let token = identityToken;
-        for (let i = 0; i < 8 && !token; i++) {
-          await new Promise((r) => setTimeout(r, 300));
-          token = identityToken;
-        }
+        const token = await getAccessToken();
         if (token) {
           await fetch("/api/update-profile", {
             method: "POST",

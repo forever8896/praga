@@ -9,7 +9,8 @@
 // formalises the text-record name `agent-registration`, so we propose
 // the convention via this implementation.
 
-import { usePrivy, useIdentityToken, useSignMessage } from "@privy-io/react-auth";
+import { usePrivy, useSignMessage } from "@privy-io/react-auth";
+import { useAccessToken } from "./use-access-token";
 import { useEffect, useState } from "react";
 import { Cartouche, FleurDeLis, AlchemicalSigil } from "./ornaments";
 import Link from "next/link";
@@ -55,7 +56,7 @@ function parseRegistration(raw: string | undefined): AgentRegistration | null {
 
 export function AgentForm() {
   const { ready, authenticated, login, user } = usePrivy();
-  const { identityToken } = useIdentityToken();
+  const { accessToken: identityToken } = useAccessToken();
   const { signMessage } = useSignMessage();
 
   const [myName, setMyName] = useState<MyName | null>(null);

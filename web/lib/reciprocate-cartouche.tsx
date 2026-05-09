@@ -18,8 +18,8 @@ import {
   usePrivy,
   useSendTransaction,
   useWallets,
-  useIdentityToken,
 } from "@privy-io/react-auth";
+import { useAccessToken } from "./use-access-token";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { encodeFunctionData, parseEther } from "viem";
@@ -60,7 +60,7 @@ type Phase = "hidden" | "ready" | "pressing" | "sending" | "sent" | "error" | "d
 
 export function ReciprocateCartouche({ profileAddress }: { profileAddress: `0x${string}` | null }) {
   const { authenticated, ready, user } = usePrivy();
-  const { identityToken } = useIdentityToken();
+  const { accessToken: identityToken } = useAccessToken();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
   const router = useRouter();

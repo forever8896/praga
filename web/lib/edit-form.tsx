@@ -2,7 +2,8 @@
 
 // The real edit-your-seal form. Loads NameStone record for the signed-in
 // user's wallet, lets them edit bio/location/avatar/skills, posts back.
-import { usePrivy, useIdentityToken, useSignMessage } from "@privy-io/react-auth";
+import { usePrivy, useSignMessage } from "@privy-io/react-auth";
+import { useAccessToken } from "./use-access-token";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, AlchemicalSigil, type SigilKind } from "./ornaments";
@@ -43,7 +44,7 @@ function decodeSkills(raw: string | undefined): Skill[] {
 
 export function EditForm() {
   const { ready, authenticated, login, user } = usePrivy();
-  const { identityToken } = useIdentityToken();
+  const { accessToken: identityToken } = useAccessToken();
   const { signMessage } = useSignMessage();
   const t = useT();
   const router = useRouter();

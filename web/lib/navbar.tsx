@@ -6,7 +6,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { usePrivy, useIdentityToken } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAccessToken } from "./use-access-token";
 import { useEffect, useState } from "react";
 import { LangToggle, useT } from "./i18n";
 
@@ -14,7 +15,7 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
   const pathname = usePathname();
   const router = useRouter();
   const { ready, authenticated, login, logout } = usePrivy();
-  const { identityToken } = useIdentityToken();
+  const { accessToken: identityToken } = useAccessToken();
   const t = useT();
   const [myEns, setMyEns] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);

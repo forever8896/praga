@@ -3,7 +3,8 @@
 // Real wallet view: reads the connected Privy wallet's balance on Base
 // Sepolia, and pulls Tipped events involving that address (sent + received,
 // excluding the stealth-recipient blind spot — by design).
-import { usePrivy, useIdentityToken } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAccessToken } from "./use-access-token";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -61,7 +62,7 @@ function shortAddr(a: string): string {
 
 export function WalletView() {
   const { ready, authenticated, login, user } = usePrivy();
-  const { identityToken } = useIdentityToken();
+  const { accessToken: identityToken } = useAccessToken();
   const t = useT();
 
   const address = user?.wallet?.address as `0x${string}` | undefined;
