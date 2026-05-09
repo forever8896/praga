@@ -37,7 +37,7 @@ export async function setSubname(
   req: NameStoneSetNameRequest,
   _apiKey?: string,
 ): Promise<{ success: boolean }> {
-  storeSet(req);
+  await storeSet(req);
   return { success: true };
 }
 
@@ -48,6 +48,6 @@ export async function setTextRecord(
   value: string,
   _apiKey?: string,
 ): Promise<{ success: boolean }> {
-  storeSetText(domain, name, key, value);
+  await storeSetText(domain, name, key, value);
   return { success: true };
 }

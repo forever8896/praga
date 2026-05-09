@@ -305,11 +305,22 @@ If you run more than one city, the natural pattern is a hub: `connect.eth` resol
 
 ## Operational notes
 
-- The CCIP-Read resolver and gateway code are entirely in this repo. **No third-party hosted resolver** in the resolution path. The gateway signs responses with `PC_RESOLVER_SIGNER_KEY`; the resolver verifies on-chain. (CROPS · Censorship-Resistant leg, made literal.)
-- The store (`web/lib/resolver-store.ts`) is a baseline JSON file ∪ an in-memory overlay. Profile edits during a demo session survive on the same warm lambda and reset on cold start. **For production, swap the overlay for Vercel KV, Upstash, or Postgres.** Currently a 5-line change.
+- The CCIP-Read resolver and gateway code are entirely in this repo. **No third-party hosted resolver** in the resolution path. The gateway signs responses with `PC_RESOLVER_SIGNER_KEY`; the resolver verifies on-chain. (CROPS · Censorship-Resistant leg, made literal.) Verified end-to-end: external wallets resolve `<name>.pragueconnect.eth` via Sepolia ENS Registry → our resolver → our gateway → signed response.
+- The store (`web/lib/resolver-store.ts`) reads from baseline JSON (bundled at build) ∪ **Vercel KV** (production) ∪ in-memory overlay (dev fallback). KV is auto-detected via `KV_REST_API_URL` + `KV_REST_API_TOKEN`. **One-click provisioning in Vercel dashboard → Storage → Create KV** — the env vars get auto-injected.
 - Contracts deployed by the project's deployer EOA. Demo subnames are also owned by that EOA. Real users get fresh Privy embedded wallets.
-- Need testnet ETH for Base Sepolia? <https://www.alchemy.com/faucets/base-sepolia>. The tip and escrow flows surface this link inline when balance is too low.
+- **Faucet drip** (`POST /api/faucet-drip`) sends ~0.005 ETH on Base Sepolia to any Privy-authenticated user whose balance is below 0.001 ETH. Rate-limited to one drip per address per 24h via KV. Requires `PC_FAUCET_KEY` env var (private key of a project-funded EOA on Base Sepolia). The tip page surfaces a "TOP ME UP" button when balance is low — sits next to the public Alchemy faucet link as a fallback.
 - Fork-and-rename in good taste: the `pragueconnect.eth` parent is owned by the project deployer for the hackathon; if you want to fork the *brand* (rather than the *city*), please pick a different parent ENS name.
+
+## Public-testing checklist
+
+Before handing the URL to testers:
+
+1. **Provision Vercel KV** (Dashboard → Storage → Create KV). Vercel auto-injects `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `KV_REST_API_READ_ONLY_TOKEN` into all environments. Without this, claims live only in lambda memory and are lost on cold start.
+2. **Fund the faucet wallet.** Generate an EOA, get its private key into `PC_FAUCET_KEY`, fund it with ≥ 0.5 Base Sepolia ETH from <https://www.alchemy.com/faucets/base-sepolia>. Cooldown is 24h per address so 100 ETH = 20,000 testers.
+3. **Verify external CCIP-Read** with `bun web/scripts/ccip-check.ts` — should print the addr for `ales.pragueconnect.eth` against the `pragueconnect.eth` resolver on Sepolia.
+4. **Smoke-test claim → profile → tip** on a fresh device.
+
+Once those four pass, the app is ready for asynchronous public testing. Without #1 and #2, treat it as "demo-only".
 
 ## License
 

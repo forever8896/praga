@@ -88,7 +88,7 @@ async function handle({ sender, data }: CCIPRequest): Promise<Response> {
   try {
     if (innerSelector === SELECTORS.addr) {
       const [node] = decodeAbiParameters([{ name: "node", type: "bytes32" }], `0x${inner.slice(10)}`);
-      const rec = findByNamehash(node as `0x${string}`);
+      const rec = await findByNamehash(node as `0x${string}`);
       const addr = (rec?.address ?? "0x0000000000000000000000000000000000000000") as `0x${string}`;
       result = encodeAbiParameters([{ type: "address" }], [addr]);
     } else if (innerSelector === SELECTORS.addrMulticoin) {
@@ -99,7 +99,7 @@ async function handle({ sender, data }: CCIPRequest): Promise<Response> {
         ],
         `0x${inner.slice(10)}`,
       );
-      const rec = findByNamehash(node as `0x${string}`);
+      const rec = await findByNamehash(node as `0x${string}`);
       // Coin type 60 = ETH on mainnet. ENS multichain spec: addr() with cointype=60 must equal addr(node).
       const ETH_COIN = BigInt(60);
       let addrBytes: `0x${string}` = "0x";
@@ -120,12 +120,12 @@ async function handle({ sender, data }: CCIPRequest): Promise<Response> {
         ],
         `0x${inner.slice(10)}`,
       );
-      const rec = findByNamehash(node as `0x${string}`);
+      const rec = await findByNamehash(node as `0x${string}`);
       const value = rec?.text_records?.[key as string] ?? "";
       result = encodeAbiParameters([{ type: "string" }], [value]);
     } else if (innerSelector === SELECTORS.contenthash) {
       const [node] = decodeAbiParameters([{ name: "node", type: "bytes32" }], `0x${inner.slice(10)}`);
-      const rec = findByNamehash(node as `0x${string}`);
+      const rec = await findByNamehash(node as `0x${string}`);
       const ch = rec?.contenthash;
       const hexCh = (ch && ch.length > 0 ? (ch.startsWith("0x") ? ch : `0x${ch}`) : "0x") as `0x${string}`;
       result = encodeAbiParameters([{ type: "bytes" }], [hexCh]);

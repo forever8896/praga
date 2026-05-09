@@ -80,6 +80,8 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
   const [err, setErr] = useState<string | null>(null);
   const [balanceEth, setBalanceEth] = useState<number | null>(null);
   const [inviter, setInviter] = useState<InviterContext | null>(null);
+  const [dripping, setDripping] = useState(false);
+  const [dripErr, setDripErr] = useState<string | null>(null);
 
   const myAddress = user?.wallet?.address as `0x${string}` | undefined;
   const tipAddr = env.tipAddress;
@@ -135,6 +137,42 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
   const requiredEth = Number.parseFloat(amountEth || "0") + 0.0001; // amount + tiny gas buffer
   const insufficientFunds = balanceEth !== null && balanceEth < requiredEth;
   const canTip = ready && authenticated && hasStealth && !sending && tipAddr && !insufficientFunds;
+
+  const onDrip = async () => {
+    if (!identityToken || !myAddress) return;
+    setDripping(true);
+    setDripErr(null);
+    try {
+      const res = await fetch("/api/faucet-drip", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${identityToken}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error === "rate-limited") {
+          setDripErr(`Already topped up. Try again in ${Math.ceil((data.retryAfterSeconds ?? 3600) / 3600)}h or use the public faucet.`);
+        } else if (data.error === "faucet-not-configured") {
+          setDripErr("Drip wallet not configured — use the public faucet link.");
+        } else if (data.error === "faucet-low") {
+          setDripErr("Project drip wallet is empty — use the public faucet link.");
+        } else {
+          setDripErr(data.error ?? "Top-up failed.");
+        }
+        return;
+      }
+      // Re-poll balance — drip should already have been confirmed server-side.
+      const balRes = await fetch("https://sepolia.base.org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [myAddress, "latest"] }),
+      }).then((r) => r.json());
+      if (balRes.result) setBalanceEth(Number(BigInt(balRes.result)) / 1e18);
+    } catch (e) {
+      setDripErr(e instanceof Error ? e.message : "Top-up failed.");
+    } finally {
+      setDripping(false);
+    }
+  };
 
   const onSend = async () => {
     if (!recipient.address || !tipAddr) return;
@@ -278,10 +316,35 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
                 {insufficientFunds && <span style={{ marginLeft: 6 }}>· {t("tip.notEnough")} {amountEth} ETH {t("tip.gasBuffer")}</span>}
               </div>
               {insufficientFunds && (
-                <a href="https://www.alchemy.com/faucets/base-sepolia" target="_blank" rel="noreferrer" className="t-display" style={{ fontSize: 10, letterSpacing: "0.25em", color: "var(--vermilion)", textDecoration: "none", borderBottom: "0.5px solid var(--vermilion)", paddingBottom: 1 }}>
-                  {t("tip.faucet")}
-                </a>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={onDrip}
+                    disabled={dripping}
+                    className="t-display"
+                    style={{
+                      fontSize: 10,
+                      letterSpacing: "0.25em",
+                      background: "var(--vermilion)",
+                      color: "var(--parchment)",
+                      border: "none",
+                      padding: "6px 12px",
+                      cursor: dripping ? "wait" : "pointer",
+                      opacity: dripping ? 0.6 : 1,
+                    }}
+                  >
+                    {dripping ? "…" : "TOP ME UP"}
+                  </button>
+                  <a href="https://www.alchemy.com/faucets/base-sepolia" target="_blank" rel="noreferrer" className="t-display" style={{ fontSize: 10, letterSpacing: "0.25em", color: "var(--vermilion)", textDecoration: "none", borderBottom: "0.5px solid var(--vermilion)", paddingBottom: 1 }}>
+                    {t("tip.faucet")}
+                  </a>
+                </div>
               )}
+            </div>
+          )}
+          {dripErr && (
+            <div className="t-italic" style={{ fontSize: 12, color: "var(--vermilion)", marginBottom: 10, lineHeight: 1.5 }}>
+              {dripErr}
             </div>
           )}
 
