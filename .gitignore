@@ -1,0 +1,53 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# next.js
+web/.next/
+web/out/
+web/.vercel/
+web/.turbo/
+
+# foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# env / secrets — never commit
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# screenshots and ad-hoc design captures (kept under design/ if intentional)
+*.png
+!design/**/*.png
+!CLAUDE_DESIGN_PROMPT.png
+
+# playwright artefacts
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# bun — bun.lockb is committed for reproducibility
+
+# typescript build info
+*.tsbuildinfo
+next-env.d.ts

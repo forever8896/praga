@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Praga — the Rudolfine Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cormorant+SC:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=UnifrakturCook:wght@700&family=UnifrakturMaguntia&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #2a261f; }
+  body { font-family: var(--body); color: var(--ink); }
+  *, *::before, *::after { box-sizing: border-box; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ornaments.jsx"></script>
+<script type="text/babel" src="screen-spec.jsx"></script>
+<script type="text/babel" src="screen-onboarding.jsx"></script>
+<script type="text/babel" src="screen-discovery.jsx"></script>
+<script type="text/babel" src="screen-profile.jsx"></script>
+<script type="text/babel" src="screen-composer.jsx"></script>
+<script type="text/babel" src="screen-thread.jsx"></script>
+<script type="text/babel" src="screen-receipt.jsx"></script>
+<script type="text/babel" src="screen-edit.jsx"></script>
+<script type="text/babel" src="screen-wallet.jsx"></script>
+<script type="text/babel" src="screen-stealth.jsx"></script>
+<script type="text/babel" src="screen-agent.jsx"></script>
+<script type="text/babel" src="screen-states.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="note" title="Praga — the Rudolfine Workshop" subtitle="A peer-to-peer marketplace in Prague. Royal but not pompous, alchemical but not occult-cosplay. Every user is an ENS name; the personal site IS the profile.">
+        <DCArtboard id="designers-note" label="Designer's note" width={680} height={420}>
+          <DesignersNote />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="spec" title="11 · System spec sheet" subtitle="Pigments, type, sigils, ornaments, seals — one illuminated leaf.">
+        <DCArtboard id="spec-desktop" label="Desktop · 1440" width={1440} height={1800}>
+          <ScreenSpec />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="onboarding" title="01 · Claim your name in Prague" subtitle="Privy-style embedded account; ENS as inscription chisel.">
+        <DCArtboard id="onboard-mobile" label="Mobile · 390" width={390} height={844}>
+          <ScreenOnboardingMobile />
+        </DCArtboard>
+        <DCArtboard id="onboard-desktop" label="Desktop · 1440" width={1440} height={900}>
+          <ScreenOnboardingDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="discovery" title="02 · The town square" subtitle="A vertical stream of cartouche-framed offers — the notice board, pinned with seals.">
+        <DCArtboard id="disco-mobile" label="Mobile · 390" width={390} height={1100}>
+          <ScreenDiscoveryMobile />
+        </DCArtboard>
+        <DCArtboard id="disco-desktop" label="Desktop · 1440" width={1440} height={1100}>
+          <ScreenDiscoveryDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="profile" title="03 · The personal site — the hero artifact" subtitle="username.praga.eth.limo as an illuminated manuscript leaf. Public-visitor view.">
+        <DCArtboard id="profile-mobile" label="Mobile · 390" width={390} height={1480}>
+          <ScreenProfileMobile />
+        </DCArtboard>
+        <DCArtboard id="profile-desktop" label="Public · Desktop · 1440" width={1440} height={1480}>
+          <ScreenProfileDesktop width={1440} />
+        </DCArtboard>
+        <DCArtboard id="profile-1920" label="Public · Desktop · 1920 (full marginalia)" width={1920} height={1480}>
+          <ScreenProfileDesktop width={1920} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="composer" title="04 · Offer / request composer" subtitle="“YOU OFFER ___” — title set in display caps as the user types.">
+        <DCArtboard id="compose-mobile" label="Mobile · 390" width={390} height={844}>
+          <ScreenComposerMobile />
+        </DCArtboard>
+        <DCArtboard id="compose-desktop" label="Desktop · 1440" width={1440} height={900}>
+          <ScreenComposerDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="thread" title="05 · Private thread + Magnum Opus escrow" subtitle="Four states — Nigredo / Albedo / Citrinitas / Rubedo. The commerce moment.">
+        <DCArtboard id="thread-mobile-nigredo" label="Mobile · Nigredo" width={390} height={844}>
+          <ScreenThreadMobile state="nigredo" />
+        </DCArtboard>
+        <DCArtboard id="thread-mobile-albedo" label="Mobile · Albedo" width={390} height={844}>
+          <ScreenThreadMobile state="albedo" />
+        </DCArtboard>
+        <DCArtboard id="thread-mobile-citrinitas" label="Mobile · Citrinitas" width={390} height={844}>
+          <ScreenThreadMobile state="citrinitas" />
+        </DCArtboard>
+        <DCArtboard id="thread-mobile-rubedo" label="Mobile · Rubedo" width={390} height={844}>
+          <ScreenThreadMobile state="rubedo" />
+        </DCArtboard>
+        <DCArtboard id="thread-desktop-nigredo" label="Desktop · Nigredo" width={1440} height={900}>
+          <ScreenThreadDesktop state="nigredo" />
+        </DCArtboard>
+        <DCArtboard id="thread-desktop-albedo" label="Desktop · Albedo" width={1440} height={900}>
+          <ScreenThreadDesktop state="albedo" />
+        </DCArtboard>
+        <DCArtboard id="thread-desktop-citrinitas" label="Desktop · Citrinitas" width={1440} height={900}>
+          <ScreenThreadDesktop state="citrinitas" />
+        </DCArtboard>
+        <DCArtboard id="thread-desktop-rubedo" label="Desktop · Rubedo" width={1440} height={900}>
+          <ScreenThreadDesktop state="rubedo" />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="receipt" title="06 · Reputation receipt" subtitle="A formal patent of completion. Something you'd actually frame.">
+        <DCArtboard id="receipt-mobile" label="Mobile · 390" width={390} height={844}>
+          <ScreenReceiptMobile />
+        </DCArtboard>
+        <DCArtboard id="receipt-desktop" label="Desktop · 1440" width={1440} height={1000}>
+          <ScreenReceiptDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="edit" title="07 · Edit your seal — the secret authenticated view" subtitle="Same illuminated layout. Subname shelves visible on the side.">
+        <DCArtboard id="edit-mobile" label="Mobile · 390" width={390} height={1280}>
+          <ScreenEditMobile />
+        </DCArtboard>
+        <DCArtboard id="edit-desktop" label="Desktop · 1440" width={1440} height={1280}>
+          <ScreenEditDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="wallet" title="08 · The ledger" subtitle="Leather-bound feel. Receipts as wax-seal entries. Stealth scanner runs silently.">
+        <DCArtboard id="wallet-mobile" label="Mobile · 390" width={390} height={900}>
+          <ScreenWalletMobile />
+        </DCArtboard>
+        <DCArtboard id="wallet-desktop" label="Desktop · 1440" width={1440} height={1000}>
+          <ScreenWalletDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="stealth" title="09 · Send a private gift" subtitle="Stealth-address payment compose — visitor on a personal site. Web only.">
+        <DCArtboard id="stealth-desktop" label="Desktop · 1440 — modal over profile" width={1440} height={1000}>
+          <ScreenStealthDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="agent" title="10 · Praga Agent — the familiar" subtitle="Optional delegate. agent.kilian.praga.eth, rendered as a line-engraved owl.">
+        <DCArtboard id="agent-mobile" label="Mobile · 390" width={390} height={1000}>
+          <ScreenAgentMobile />
+        </DCArtboard>
+        <DCArtboard id="agent-desktop" label="Desktop · 1440" width={1440} height={1000}>
+          <ScreenAgentDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="states" title="12 · Empty / error / loading vignettes" subtitle="No 0x. No calldata. Czech and English.">
+        <DCArtboard id="state-empty-m" label="Empty · Mobile" width={390} height={680}>
+          <ScreenStateEmpty viewport="mobile" />
+        </DCArtboard>
+        <DCArtboard id="state-empty-d" label="Empty · Desktop" width={900} height={680}>
+          <ScreenStateEmpty viewport="desktop" />
+        </DCArtboard>
+        <DCArtboard id="state-error-m" label="Error · Mobile" width={390} height={680}>
+          <ScreenStateError viewport="mobile" />
+        </DCArtboard>
+        <DCArtboard id="state-error-d" label="Error · Desktop" width={900} height={680}>
+          <ScreenStateError viewport="desktop" />
+        </DCArtboard>
+        <DCArtboard id="state-loading-m" label="Loading · Mobile" width={390} height={680}>
+          <ScreenStateLoading viewport="mobile" />
+        </DCArtboard>
+        <DCArtboard id="state-loading-d" label="Loading · Desktop" width={900} height={680}>
+          <ScreenStateLoading viewport="desktop" />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+function DesignersNote() {
+  return (
+    <div className="parchment-surface" style={{ padding: 44, height: '100%', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 18, right: 18 }}>
+        <FleurDeLis size={28} />
+      </div>
+      <div style={{ position: 'absolute', top: 18, left: 18 }}>
+        <FleurDeLis size={28} />
+      </div>
+      <div className="t-display" style={{ fontSize: 13, letterSpacing: '0.4em', color: 'var(--vermilion)', marginBottom: 8 }}>Designer's note</div>
+      <div className="t-display" style={{ fontSize: 32, letterSpacing: '0.06em', lineHeight: 1.05, marginBottom: 16, color: 'var(--ink)' }}>The Rudolfine Workshop</div>
+      <div className="hr-double" style={{ marginBottom: 16, width: 80 }} />
+      <div className="t-body" style={{ fontSize: 16, lineHeight: 1.55, color: 'var(--ink)' }}>
+        <span style={{ fontFamily: 'var(--display)', fontSize: 50, lineHeight: 0.9, float: 'left', padding: '0.05em 0.12em 0 0', color: 'var(--vermilion)', fontWeight: 600 }}>S</span>
+        kol is Prague's peer-to-peer marketplace for human favors — paid in small crypto, but no jargon ever shown. The visual lens is the court of Rudolf II: alchemists, astronomers and craftsmen at work in a single small city. Every user is an <span className="t-mono" style={{ fontSize: 14 }}>ENS</span> name that <em>is</em> their identity, their public site, and the route through which payment reaches them. Reputation lives on the human, not on us. Color comes from pigment, not light. Every ornament earns its place.
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

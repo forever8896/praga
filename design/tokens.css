@@ -1,0 +1,83 @@
+/* Praga — Rudolfine Workshop tokens */
+:root {
+  --ink: #0F0E0C;
+  --parchment: #F4ECD8;
+  --bone: #E6DCC4;
+  --vermilion: #B23A2F;
+  --vermilion-deep: #8C2A22;
+  --lapis: #1F3A6E;
+  --gilded: #C8A24A;
+  --gilded-soft: #B59140;
+  --verdigris: #3E6B5A;
+
+  --ink-70: rgba(15, 14, 12, 0.70);
+  --ink-50: rgba(15, 14, 12, 0.50);
+  --ink-30: rgba(15, 14, 12, 0.30);
+  --ink-15: rgba(15, 14, 12, 0.15);
+  --ink-08: rgba(15, 14, 12, 0.08);
+
+  --display: 'Cormorant Garamond', 'Cormorant SC', 'Trajan Pro', serif;
+  --body: 'EB Garamond', 'Garamond', 'Caslon Pro', Georgia, serif;
+  --ceremonial: 'UnifrakturCook', 'UnifrakturMaguntia', serif;
+  --mono: 'JetBrains Mono', 'iA Writer Mono', ui-monospace, monospace;
+}
+
+/* parchment grain — extremely subtle */
+.parchment-surface {
+  background-color: var(--parchment);
+  background-image:
+    radial-gradient(rgba(176, 138, 78, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(120, 90, 50, 0.04) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+}
+
+.bone-surface {
+  background-color: var(--bone);
+}
+
+.ink-surface {
+  background-color: var(--ink);
+  color: var(--parchment);
+  background-image:
+    radial-gradient(rgba(244, 236, 216, 0.04) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* type utilities */
+.t-display {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-feature-settings: 'smcp' on;
+}
+.t-display-tight { letter-spacing: 0.04em; }
+.t-body { font-family: var(--body); font-weight: 400; }
+.t-italic { font-family: var(--body); font-style: italic; font-weight: 400; }
+.t-mono { font-family: var(--mono); font-weight: 400; letter-spacing: -0.01em; }
+.t-cer { font-family: var(--ceremonial); font-weight: 400; }
+
+/* hairline rules */
+.hr-gilded {
+  height: 0;
+  border-top: 0.5px solid var(--gilded);
+  opacity: 0.7;
+}
+.hr-double {
+  height: 3px;
+  border-top: 0.5px solid var(--gilded);
+  border-bottom: 0.5px solid var(--gilded);
+  opacity: 0.7;
+}
+
+/* drop cap */
+.dropcap::first-letter {
+  font-family: var(--display);
+  font-size: 4.2em;
+  line-height: 0.9;
+  float: left;
+  padding: 0.05em 0.12em 0 0;
+  color: var(--vermilion);
+  font-weight: 600;
+}
