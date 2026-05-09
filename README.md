@@ -161,7 +161,18 @@ ethprague/
 
 ## Deployed addresses
 
-### Sepolia (11155111) — ENS resolver
+### Mainnet (1) — ENS resolver (production)
+
+| Contract | Address |
+|---|---|
+| `PragueConnectResolver` (CCIP-Read) | `0x2F79b1950CcaA58259ea62bFe99107De75018D92` |
+| `pragueconnect.eth` parent | wrapped under NameWrapper, resolver → ↑ |
+| Owner (NameWrapper) | `0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401` |
+| True owner (deployer) | `0x2908209845Edd4B526B9F26E3b3bba73E9A59D10` |
+
+End-to-end mainnet resolution verified for `ales`, `kilian`, `lucia` subnames via `bun web/scripts/mainnet-resolve-check.ts`.
+
+### Sepolia (11155111) — ENS resolver (legacy, retained for tests)
 
 | Contract | Address |
 |---|---|
@@ -311,15 +322,42 @@ If you run more than one city, the natural pattern is a hub: `connect.eth` resol
 - **Faucet drip** (`POST /api/faucet-drip`) sends ~0.005 ETH on Base Sepolia to any Privy-authenticated user whose balance is below 0.001 ETH. Rate-limited to one drip per address per 24h via KV. Requires `PC_FAUCET_KEY` env var (private key of a project-funded EOA on Base Sepolia). The tip page surfaces a "TOP ME UP" button when balance is low — sits next to the public Alchemy faucet link as a fallback.
 - Fork-and-rename in good taste: the `pragueconnect.eth` parent is owned by the project deployer for the hackathon; if you want to fork the *brand* (rather than the *city*), please pick a different parent ENS name.
 
-## Mainnet ENS registration (post-hackathon, optional)
+## Mainnet ENS registration — DONE
 
-Today `pragueconnect.eth` lives on **Sepolia**, which means:
+`pragueconnect.eth` is registered on Ethereum mainnet, owned by `0x2908…9D10` via NameWrapper, with our own `PragueConnectResolver` at `0x2F79b1950CcaA58259ea62bFe99107De75018D92`. Mainnet ENS now resolves all our subnames through the same CCIP-Read gateway as Sepolia did.
 
-- ✅ ENS resolution works from any Sepolia-aware client (verified end-to-end)
-- ❌ `<name>.pragueconnect.eth.limo` does **not** resolve in browsers — eth.limo is mainnet-only
-- ❌ Wallets/dApps querying mainnet ENS won't find our subnames
+Verify locally:
 
-To make `<name>.pragueconnect.eth.limo` resolve in the open web (and unlock the full Swarm story end-to-end), the parent name needs a mainnet registration. Cost: ~0.015 ETH (~$60–70 at May 2026 prices) — name fee + gas + resolver redeploy.
+```bash
+bun web/scripts/mainnet-resolve-check.ts
+# → ales.pragueconnect.eth resolves to 0x2908... with text records on mainnet
+```
+
+### About `<name>.pragueconnect.eth.limo`
+
+eth.limo's wildcard TLS cert only covers `*.eth.limo` (one level), not `*.<parent>.eth.limo` (two levels). Even well-known third-level names like `uni.uniswap.eth.limo` return TLS errors via eth.limo. So `<name>.pragueconnect.eth.limo` URLs **don't work in browsers** — that's an eth.limo platform constraint, not something we can fix from the resolver side.
+
+What does work:
+- **Mainnet ENS resolution itself** — any wallet/dApp pointed at mainnet returns the right address + text records for any `<name>.pragueconnect.eth` (verified via viem).
+- **The Swarm gateway URL** on each profile's "served from Swarm" badge — links directly to `api.gateway.ethswarm.org/bzz/<ref>/`, which serves the rendered HTML with no eth.limo dependency. This is the censorship-resistant view of any user's profile.
+- **The canonical Vercel-hosted profile** at `pragueconnect-azure.vercel.app/<ens>` — interactive, reads the same data through the same resolver.
+
+### Cost actually incurred
+
+Originally planned 0.015 ETH; actually spent **0.0026 ETH** thanks to low gas (~0.4 gwei) at the time of registration:
+
+| Step | Tx hash | Gas | Cost |
+|---|---|---|---|
+| Resolver deploy | (forge create) | ~600k | ~0.0002 ETH |
+| `commit()` | `0xf10760b1…` | 44,194 | ~0.000016 ETH |
+| `register()` (incl. ~0.00216 name fee) | `0xdc4781e1…` | 255,376 | ~0.00229 ETH |
+| **Total** | | | **~0.0026 ETH** |
+
+Remaining balance ~0.012 ETH on `0x2908…9D10` — enough for several years of renewals.
+
+### Re-running the script
+
+If you ever need to re-register or extend, the script in `contracts/script/register-mainnet.sh` is idempotent: pass `PRAGUECONNECT_MAINNET_RESOLVER=0x2F79…D92` to skip the resolver deploy.
 
 The script in `contracts/script/register-mainnet.sh` automates the full dance:
 

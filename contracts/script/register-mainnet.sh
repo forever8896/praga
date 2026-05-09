@@ -79,7 +79,9 @@ echo "→ checking deployer balance…"
 BALANCE_WEI=$(cast balance "$DEPLOYER_ADDR" --rpc-url "$ETH_MAINNET_RPC")
 BALANCE_ETH=$(cast to-unit "$BALANCE_WEI" ether)
 echo "  balance: ${BALANCE_ETH} ETH"
-if (( $(echo "$BALANCE_ETH < 0.015" | bc -l) )); then
+# Compare in wei (integer): 0.015 ETH = 15000000000000000 wei
+if [[ "$BALANCE_WEI" -lt 15000000000000000 ]] 2>/dev/null \
+   || python3 -c "import sys; sys.exit(0 if int('$BALANCE_WEI') < 15000000000000000 else 1)"; then
   echo "  ⚠  recommend ≥ 0.015 ETH. continuing anyway…"
 fi
 echo
@@ -95,17 +97,23 @@ echo
 
 echo "→ fetching rent price…"
 PRICE_RAW=$(cast call "$ENS_CONTROLLER" "rentPrice(string,uint256)((uint256,uint256))" "$ENS_NAME" "$DURATION_SECONDS" --rpc-url "$ETH_MAINNET_RPC")
-# Returns a tuple "(base, premium)" — strip the parens
-PRICE_INNER=$(echo "$PRICE_RAW" | tr -d '()' | tr ',' ' ')
-BASE_PRICE=$(echo "$PRICE_INNER" | awk '{print $1}')
-PREMIUM_PRICE=$(echo "$PRICE_INNER" | awk '{print $2}')
-TOTAL_PRICE=$(echo "$BASE_PRICE + $PREMIUM_PRICE" | bc)
+# cast formats tuple return as `(BASE [sci.notation], PREMIUM)`. Strip the
+# parens, the scientific-notation hint, and split on whitespace.
+CLEAN_PRICE=$(echo "$PRICE_RAW" | sed -E 's/\[[^]]*\]//g; s/[(),]/ /g')
+BASE_PRICE=$(echo "$CLEAN_PRICE" | awk '{print $1}')
+PREMIUM_PRICE=$(echo "$CLEAN_PRICE" | awk '{print $2}')
+if [[ -z "$BASE_PRICE" || -z "$PREMIUM_PRICE" ]]; then
+  echo "  ✗ failed to parse rent price. raw: $PRICE_RAW"
+  exit 1
+fi
+# Total + 10% buffer using python (large integer math; bash $(()) overflows on 18-decimal wei)
+TOTAL_PRICE=$(python3 -c "print(int('$BASE_PRICE') + int('$PREMIUM_PRICE'))")
+REG_VALUE=$(python3 -c "print((int('$BASE_PRICE') + int('$PREMIUM_PRICE')) * 110 // 100)")
 TOTAL_PRICE_ETH=$(cast to-unit "$TOTAL_PRICE" ether)
-echo "  base premium total"
-echo "  ${BASE_PRICE} ${PREMIUM_PRICE} ${TOTAL_PRICE} wei (${TOTAL_PRICE_ETH} ETH)"
-# Add 10% buffer for value sent to register (refunded if not needed)
-REG_VALUE=$(echo "$TOTAL_PRICE * 110 / 100" | bc)
-echo "  sending: ${REG_VALUE} wei (10% buffer; remainder refunded)"
+echo "  base:    ${BASE_PRICE} wei"
+echo "  premium: ${PREMIUM_PRICE} wei"
+echo "  total:   ${TOTAL_PRICE} wei (${TOTAL_PRICE_ETH} ETH)"
+echo "  sending: ${REG_VALUE} wei (10% buffer; remainder refunded by controller)"
 echo
 
 # --- Confirm ---
