@@ -1,6 +1,7 @@
 // Screen 1 — Landing / onboarding — Claim your name in Prague.
 // Ported from /design/screen-onboarding.jsx.
 "use client";
+import Image from "next/image";
 import { Cartouche, FleurDeLis } from "@/lib/ornaments";
 import { OnboardingForm } from "@/lib/onboarding-form";
 import { InviterCapture } from "@/lib/inheritance-tab";
@@ -84,9 +85,15 @@ function MobileOnboarding() {
   return (
     <div className="parchment-surface mobile-only" style={{ width: "100%", minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ flex: 1, padding: "32px 32px 0", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-        <div style={{ marginBottom: 8 }}><FleurDeLis size={40} /></div>
-        <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.4em", color: "var(--vermilion)", marginBottom: 4 }}>PragueConnect</div>
-        <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)" }}>est. anno mmxxvi · PragueConnect</div>
+        <Image
+          src="/logo.png"
+          alt="PragueConnect"
+          width={300}
+          height={200}
+          priority
+          style={{ height: 92, width: "auto", display: "block", marginBottom: 4 }}
+        />
+        <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)" }}>est. anno mmxxvi · Praha</div>
         <div className="hr-double" style={{ width: 48, marginTop: 16, marginBottom: 28 }} />
 
         <div className="t-display" style={{ fontSize: 30, letterSpacing: "0.05em", lineHeight: 1.05, marginBottom: 14 }}>{t("home.headline.line1")}<br />{t("home.headline.italic")} {t("home.headline.line2")}</div>

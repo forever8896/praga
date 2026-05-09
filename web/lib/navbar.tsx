@@ -3,11 +3,11 @@
 // Shared top navigation. Adapts to sign-in state and shows the user's
 // claimed name when known. Renders on every screen except the bare home
 // (the onboarding cartouche has its own header).
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { usePrivy, useIdentityToken } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
-import { FleurDeLis } from "./ornaments";
 import { LangToggle, useT } from "./i18n";
 
 export function Navbar({ variant = "default" }: { variant?: "default" | "transparent" }) {
@@ -58,64 +58,56 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
 
   return (
     <header
+      className="navbar-shell"
       style={{
         position: "sticky",
         top: 0,
         zIndex: 30,
         background: bgRule,
-        borderBottom: "0.5px solid var(--gilded)",
+        backdropFilter: variant === "transparent" ? "blur(8px)" : undefined,
+        WebkitBackdropFilter: variant === "transparent" ? "blur(8px)" : undefined,
       }}
     >
-      <div
-        style={{
-          maxWidth: 1440,
-          margin: "0 auto",
-          padding: "12px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--ink)" }}>
-          <FleurDeLis size={22} />
-          <span className="t-display" style={{ fontSize: 13, letterSpacing: "0.4em" }}>PRAGUECONNECT</span>
+      <div className="navbar-inner">
+        <Link href="/" aria-label="PragueConnect" className="navbar-brand">
+          <Image
+            src="/logo.png"
+            alt="PragueConnect"
+            width={300}
+            height={239}
+            priority
+            className="navbar-logo"
+          />
         </Link>
 
         {/* Desktop links */}
-        <nav style={{ display: "flex", alignItems: "center", gap: 28 }} className="navbar-desktop">
+        <nav className="navbar-desktop" aria-label="Main">
           {links
             .filter((l) => l.show === "always" || authenticated)
             .map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className="t-italic"
-                style={{
-                  fontSize: 14,
-                  color: linkActive(l.href) ? "var(--vermilion)" : "var(--ink-70)",
-                  textDecoration: "none",
-                  borderBottom: linkActive(l.href) ? "0.5px solid var(--vermilion)" : "none",
-                  paddingBottom: 2,
-                }}
+                className={`navbar-link ${linkActive(l.href) ? "navbar-link-active" : ""}`}
               >
                 {l.label}
               </Link>
             ))}
         </nav>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="navbar-right">
           <LangToggle />
           {!ready ? (
-            <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-50)" }}>…</span>
+            <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-50)", letterSpacing: "0.1em" }}>…</span>
           ) : authenticated ? (
             <>
               {myEns && (
                 <Link
                   href={`/${myEns}`}
                   className="t-mono navbar-myens"
-                  style={{ fontSize: 12, color: "var(--ink)", textDecoration: "none", borderBottom: "0.5px solid var(--gilded)" }}
+                  aria-label={`Your seal — ${myEns}`}
                 >
+                  <span className="navbar-myens-dot" />
                   {myEns}
                 </Link>
               )}
@@ -125,8 +117,7 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
                   logout();
                   router.push("/");
                 }}
-                className="t-display"
-                style={{ fontSize: 10, letterSpacing: "0.25em", color: "var(--ink-70)", background: "transparent", border: "none", cursor: "pointer" }}
+                className="t-display navbar-signout"
               >
                 {t("nav.signout")}
               </button>
@@ -135,8 +126,7 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
             <button
               type="button"
               onClick={() => login()}
-              className="t-display"
-              style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--parchment)", background: "var(--ink)", padding: "8px 14px", border: "none", cursor: "pointer" }}
+              className="t-display navbar-signin"
             >
               {t("nav.signin")}
             </button>
@@ -146,21 +136,26 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
           <button
             type="button"
             aria-label="Menu"
+            aria-expanded={navOpen}
             onClick={() => setNavOpen((v) => !v)}
             className="navbar-burger"
-            style={{ background: "transparent", border: "0.5px solid var(--gilded)", padding: "6px 10px", cursor: "pointer", color: "var(--ink)", fontFamily: "var(--mono)", fontSize: 14 }}
           >
-            ≡
+            <span className={`navbar-burger-line ${navOpen ? "navbar-burger-x1" : ""}`} />
+            <span className={`navbar-burger-line ${navOpen ? "navbar-burger-fade" : ""}`} />
+            <span className={`navbar-burger-line ${navOpen ? "navbar-burger-x2" : ""}`} />
           </button>
         </div>
       </div>
 
+      {/* Engraved double hairline */}
+      <div className="navbar-rule" aria-hidden="true">
+        <div className="navbar-rule-thick" />
+        <div className="navbar-rule-thin" />
+      </div>
+
       {/* Mobile menu */}
       {navOpen && (
-        <div
-          className="navbar-mobile-menu"
-          style={{ borderTop: "0.5px solid var(--gilded)", background: "var(--parchment)", padding: "12px 20px" }}
-        >
+        <div className="navbar-mobile-menu">
           {links
             .filter((l) => l.show === "always" || authenticated)
             .map((l) => (
@@ -168,19 +163,21 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
                 key={l.href}
                 href={l.href}
                 onClick={() => setNavOpen(false)}
-                className="t-italic"
-                style={{
-                  display: "block",
-                  padding: "10px 0",
-                  fontSize: 16,
-                  color: linkActive(l.href) ? "var(--vermilion)" : "var(--ink)",
-                  textDecoration: "none",
-                  borderBottom: "0.5px solid var(--gilded)",
-                }}
+                className={`navbar-mobile-link ${linkActive(l.href) ? "navbar-mobile-link-active" : ""}`}
               >
+                <span className="navbar-mobile-link-mark" />
                 {l.label}
               </Link>
             ))}
+          {authenticated && myEns && (
+            <Link
+              href={`/${myEns}`}
+              onClick={() => setNavOpen(false)}
+              className="t-mono navbar-mobile-myens"
+            >
+              {myEns}
+            </Link>
+          )}
         </div>
       )}
     </header>

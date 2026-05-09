@@ -39,10 +39,21 @@ export const metadata: Metadata = {
   title: "PragueConnect — by the hand of",
   description:
     "A peer-to-peer marketplace for human favors in Prague. Reputation belongs to the human, not the platform.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   openGraph: {
     title: "PragueConnect",
     description: "By the hand of — Prague's sealed marketplace.",
     siteName: "PragueConnect",
+    images: [{ url: "/logo.png", width: 1536, height: 1024, alt: "PragueConnect" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PragueConnect",
+    description: "By the hand of — Prague's sealed marketplace.",
+    images: ["/logo.png"],
   },
 };
 
