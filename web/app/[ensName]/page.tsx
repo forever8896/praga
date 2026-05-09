@@ -2,11 +2,9 @@
 // Reads the actual NameStone record for the requested label. If the name has
 // not been claimed yet, we show a "not yet inscribed" placeholder.
 import { AlchemicalSigil, Cartouche, FleurDeLis, Marginalia, WaxSeal } from "@/lib/ornaments";
-import { KILIAN_BIO } from "@/lib/data";
 import {
   PortraitRoundel,
   ProfileHeader,
-  ProfileSkillsCatalogue,
 } from "@/lib/profile-shared";
 import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
@@ -30,8 +28,6 @@ interface ProfileData {
   isClaimed: boolean;
   hasStealth: boolean;
   hasOffers: boolean;
-  // True for the demo seed (kilian) — we still show the rich Rudolfine sample.
-  isDemoSeed: boolean;
   receiptsSent: TipReceipt[];
   receiptsReceived: TipReceipt[];
   /** Swarm bzz reference (32-byte hex) decoded from the subname's contenthash, if any. */
@@ -55,7 +51,6 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       isClaimed: false,
       hasStealth: false,
       hasOffers: false,
-      isDemoSeed: false,
       receiptsSent: [],
       receiptsReceived: [],
       swarmRef: null,
@@ -77,7 +72,6 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     isClaimed: true,
     hasStealth: !!record.text_records?.["stealth-meta-address"],
     hasOffers: decodeOffers(record.text_records?.offers).length > 0,
-    isDemoSeed: label === "kilian",
     receiptsSent,
     receiptsReceived,
     swarmRef: extractSwarmRef(record.contenthash),
@@ -225,8 +219,7 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
   if (!profile.isClaimed) {
     return <div className="mobile-only"><NotYetInscribed ens={profile.ens} /></div>;
   }
-  const bio = profile.bio || (profile.isDemoSeed ? KILIAN_BIO : `${profile.display} has just inscribed their name in PragueConnect. The bio, the catalogue and the wall will fill as the work begins.`);
-  const showRichDemo = profile.isDemoSeed;
+  const bio = profile.bio || `${profile.display} has just inscribed their name in PragueConnect. The bio, the catalogue and the wall will fill as the work begins.`;
   return (
     <div className="parchment-surface mobile-only" style={{ width: "100%", minHeight: "100vh", padding: "12px 24px 32px" }}>
       <div className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)", textAlign: "center", marginBottom: 12 }}>{profile.ens}.limo</div>
@@ -269,15 +262,9 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
         hasStealth={profile.hasStealth}
       />
 
-      <div style={{ marginTop: 24 }} className={showRichDemo ? "dropcap" : ""}>
+      <div style={{ marginTop: 24 }}>
         <div className="t-italic" style={{ fontSize: 16, lineHeight: 1.55, color: "var(--ink)" }}>{bio}</div>
       </div>
-
-      {showRichDemo && (
-        <div style={{ marginTop: 28 }}>
-          <ProfileSkillsCatalogue compact />
-        </div>
-      )}
 
       <div style={{ marginTop: 28 }}>
         <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>The wall</div>
@@ -303,8 +290,7 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
   if (!profile.isClaimed) {
     return <div className="desktop-only"><NotYetInscribed ens={profile.ens} /></div>;
   }
-  const bio = profile.bio || (profile.isDemoSeed ? KILIAN_BIO : `${profile.display} has just inscribed their name in PragueConnect. The bio, the catalogue and the wall will fill as the work begins.`);
-  const showRichDemo = profile.isDemoSeed;
+  const bio = profile.bio || `${profile.display} has just inscribed their name in PragueConnect. The bio, the catalogue and the wall will fill as the work begins.`;
   const dropChar = bio.charAt(0).toUpperCase();
   return (
     <div className="parchment-surface desktop-only" style={{ width: "100%", minHeight: "100vh", padding: "32px 56px 56px" }}>
@@ -369,8 +355,7 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
 
           <div className="hr-gilded" style={{ margin: "40px 0" }} />
 
-          <div style={{ display: "grid", gridTemplateColumns: showRichDemo ? "1fr 1fr" : "1fr", gap: 56 }}>
-            {showRichDemo && <ProfileSkillsCatalogue />}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 56 }}>
             <div>
               <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>The wall · {profile.receiptsSent.length + profile.receiptsReceived.length} sealed</div>
               <div className="t-display" style={{ fontSize: 32, letterSpacing: "0.04em", marginBottom: 16 }}>Sealed receipts</div>

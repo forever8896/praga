@@ -93,7 +93,8 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("https://sepolia.base.org", {
+        const rpc = env.defaultChainId === 8453 ? env.baseRpcUrl : env.baseSepoliaRpcUrl;
+        const res = await fetch(rpc, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [myAddress, "latest"] }),
@@ -161,7 +162,8 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
         return;
       }
       // Re-poll balance — drip should already have been confirmed server-side.
-      const balRes = await fetch("https://sepolia.base.org", {
+      const rpc = env.defaultChainId === 8453 ? env.baseRpcUrl : env.baseSepoliaRpcUrl;
+      const balRes = await fetch(rpc, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [myAddress, "latest"] }),

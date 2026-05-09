@@ -13,6 +13,14 @@ import {
   WaxSeal,
 } from "./ornaments";
 import { useT } from "./i18n";
+import { env } from "./env";
+
+function chainLabel(chainId: number): string {
+  if (chainId === 8453) return "base mainnet";
+  if (chainId === 84532) return "base sepolia";
+  if (chainId === 1) return "ethereum mainnet";
+  return `chain ${chainId}`;
+}
 
 interface RawReceipt {
   txHash: `0x${string}`;
@@ -177,7 +185,7 @@ export function WalletView() {
               </div>
               <div className="hr-gilded" style={{ margin: "20px 0 12px" }} />
               <div className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)" }}>
-                {address && <>account · <code>{shortAddr(address)}</code></>} · base sepolia · 1 ETH ≈ {KC_PER_ETH.toLocaleString("cs-CZ")} Kč (demo rate)
+                {address && <>account · <code>{shortAddr(address)}</code></>} · {chainLabel(env.defaultChainId)} · 1 ETH ≈ {KC_PER_ETH.toLocaleString("cs-CZ")} Kč (demo rate)
               </div>
               {hasStealth && (
                 <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-70)", marginTop: 6, lineHeight: 1.5 }}>
@@ -190,6 +198,11 @@ export function WalletView() {
                 </div>
               )}
             </Cartouche>
+
+            {/* Receive-at-seal pill — gives the user something to paste into any external wallet */}
+            {myName?.ens && address && (
+              <ReceivePill ens={myName.ens} address={address} chainId={env.defaultChainId} />
+            )}
 
             {err && (
               <div className="t-italic" style={{ fontSize: 13, color: "var(--vermilion)", textAlign: "center", marginTop: 14 }}>
@@ -299,3 +312,58 @@ const btnDark: React.CSSProperties = {
   cursor: "pointer",
   textDecoration: "none",
 };
+
+/** Receive-at-seal pill. Two copy targets: the ENS name (preferred — works in
+ *  any wallet that resolves ENS), and the raw 0x address (fallback for older
+ *  tools). Both deposit to the same on-chain wallet on the configured chain. */
+function ReceivePill({ ens, address, chainId }: { ens: string; address: `0x${string}`; chainId: number }) {
+  const [copied, setCopied] = useState<"ens" | "addr" | null>(null);
+  const network = chainLabel(chainId);
+  const copy = async (val: string, which: "ens" | "addr") => {
+    try {
+      await navigator.clipboard.writeText(val);
+      setCopied(which);
+      setTimeout(() => setCopied((c) => (c === which ? null : c)), 1500);
+    } catch {
+      /* ignore */
+    }
+  };
+  return (
+    <div style={{ marginTop: 18, padding: "16px 18px", border: "0.5px solid var(--gilded)", background: "var(--bone)" }}>
+      <div className="t-display" style={{ fontSize: 10, letterSpacing: "0.4em", color: "var(--vermilion)", marginBottom: 4 }}>
+        RECEIVE AT THIS SEAL
+      </div>
+      <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", marginBottom: 12, lineHeight: 1.5 }}>
+        Send funds from any wallet on <strong style={{ fontStyle: "normal", color: "var(--ink)" }}>{network}</strong> to either of these. They both land here.
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <PillRow label={ens} kind="ENS" copied={copied === "ens"} onCopy={() => copy(ens, "ens")} />
+        <PillRow label={address} kind="0x" copied={copied === "addr"} onCopy={() => copy(address, "addr")} />
+      </div>
+      <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-50)", marginTop: 10, lineHeight: 1.5 }}>
+        For a private gift, ask the sender to use your /tip page instead — that derives a fresh stealth address per payment, breaking the link to your wallet.
+      </div>
+    </div>
+  );
+}
+
+function PillRow({ label, kind, copied, onCopy }: { label: string; kind: "ENS" | "0x"; copied: boolean; onCopy: () => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "var(--parchment)", border: "0.5px solid var(--gilded)" }}>
+      <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--ink-50)", flex: "0 0 auto", minWidth: 28 }}>
+        {kind}
+      </span>
+      <code className="t-mono" style={{ flex: 1, fontSize: 12, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {label}
+      </code>
+      <button
+        type="button"
+        onClick={onCopy}
+        className="t-display"
+        style={{ flex: "0 0 auto", fontSize: 9, letterSpacing: "0.25em", color: copied ? "var(--verdigris)" : "var(--vermilion)", background: "transparent", border: "none", cursor: "pointer", padding: "4px 6px" }}
+      >
+        {copied ? "copied" : "copy"}
+      </button>
+    </div>
+  );
+}

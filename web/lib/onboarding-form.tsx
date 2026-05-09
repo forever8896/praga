@@ -1,12 +1,13 @@
 "use client";
 
 // The interactive part of the onboarding screen — Privy login, name claim, redirect.
-// The static parts (Prague silhouette, hero copy, layout) stay server-rendered.
+// Per the Claude Design handoff: the LivePreviewParchment IS the name field.
+// There is no duplicate input above; the status sits in mono-caps beneath the
+// parchment, and a single SEAL button anchors the bottom.
 
 import { usePrivy, useSignMessage, useIdentityToken } from "@privy-io/react-auth";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FleurDeLis } from "./ornaments";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { readInviter, clearInviter } from "./inheritance-tab";
 
@@ -42,11 +43,7 @@ interface ClaimedInviter {
   display: string;
 }
 
-interface ClaimedInviteCodes {
-  codes: string[];
-}
-
-export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
+export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" }) {
   const { login, authenticated, user, ready, logout } = usePrivy();
   const { signMessage } = useSignMessage();
   const { identityToken } = useIdentityToken();
@@ -60,14 +57,11 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
   const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
   const [showSealedBeat, setShowSealedBeat] = useState(false);
   const router = useRouter();
+  void router;
   const checkAbort = useRef<AbortController | null>(null);
   const inscriptionStartRef = useRef<number | null>(null);
 
-  const isMobile = size === "mobile";
-  const titleSize = isMobile ? 36 : 42;
-
-  const address = user?.wallet?.address;
-  void address;
+  void _size;
 
   // Debounced availability check via NameStone whenever `name` changes.
   useEffect(() => {
@@ -109,7 +103,6 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         setShowPromise(true);
         return;
       }
-      // user already saw the card — fall through to login
       setShowPromise(false);
       login();
       return;
@@ -160,18 +153,12 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
       if (Array.isArray(data.inviteCodes)) {
         setClaimedCodes(data.inviteCodes.filter((c: unknown): c is string => typeof c === "string"));
       }
-      // Inviter has been recorded server-side; clear from localStorage so the
-      // signal doesn't persist across future claims on this device.
       clearInviter();
 
-      // Auto-generate the stealth gift route. If the user cancels the second
-      // signature we still complete the flow — they can seal it later from
-      // /me/edit. This makes private gifts work out of the box for new users.
       try {
         setClaimState("sealing-stealth");
         const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
         const keys = derivePragueConnectKeys(signature as `0x${string}`);
-        // identityToken may not be present immediately after first login; wait briefly.
         let token = identityToken;
         for (let i = 0; i < 8 && !token; i++) {
           await new Promise((r) => setTimeout(r, 300));
@@ -192,12 +179,8 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         }
         setClaimState("fully-sealed");
       } catch {
-        // user cancelled the stealth signature — still ship them to their profile
         setClaimState("fully-sealed");
       }
-      // Hold on the inscription animation until it has dwelled long enough,
-      // then transition into Beat 5 (SealedBeat). The user picks their own
-      // next move from the celebratory screen — no silent redirect.
       const wait = Math.max(600, inscriptionRemaining(inscriptionStartRef.current));
       setTimeout(() => setShowSealedBeat(true), wait);
     } catch (e) {
@@ -206,156 +189,117 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
     }
   };
 
+  const filled = claimState === "available";
+  const claimInFlight =
+    claimState === "claiming" ||
+    claimState === "sealing-stealth";
+  const showStage = claimInFlight || claimState === "claimed" || claimState === "fully-sealed" || claimState === "error";
+
+  const statusLine = !ready
+    ? "…"
+    : !name
+    ? t("onboard.choose")
+    : claimState === "checking"
+    ? t("onboard.checking")
+    : claimState === "claiming"
+    ? "INSCRIBING…"
+    : claimState === "claimed" || claimState === "fully-sealed"
+    ? `✓ ${name}.pragueconnect.eth`
+    : claimState === "sealing-stealth"
+    ? "SEALING THE GIFT ROUTE…"
+    : claimState === "taken"
+    ? `${name}.pragueconnect.eth · ${t("onboard.taken")}`
+    : claimState === "available"
+    ? `${name}.pragueconnect.eth · ${t("onboard.available")}`
+    : "";
+
+  const statusColor =
+    claimState === "taken"
+      ? "var(--vermilion)"
+      : claimState === "available" || claimState === "claimed" || claimState === "fully-sealed"
+      ? "var(--verdigris)"
+      : "var(--ink-50)";
+
+  const sealLabel = !authenticated
+    ? t("onboard.button.seal")
+    : claimState === "fully-sealed"
+    ? "✓"
+    : claimState === "sealing-stealth"
+    ? "SEALING…"
+    : claimState === "claimed" || claimState === "claiming"
+    ? "INSCRIBING…"
+    : !name
+    ? t("onboard.button.seal")
+    : t("onboard.button.seal");
+
   return (
-    <div style={{ width: "100%", maxWidth: isMobile ? 320 : "none" }}>
-      {/* ENS inscription input */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "center",
-          fontFamily: "var(--mono)",
-          fontSize: titleSize,
-          color: "var(--ink)",
-          letterSpacing: "-0.01em",
-          fontWeight: 400,
-          marginBottom: 8,
-        }}
-      >
-        <input
-          value={name}
+    <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
+      <div style={{ marginBottom: 18, display: "flex", justifyContent: "center" }}>
+        <LivePreviewParchment
+          name={name}
+          filled={filled}
           onChange={(e) => {
-            setName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 20));
+            setName(
+              e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 20),
+            );
             setErrorMsg(null);
           }}
-          placeholder="name"
-          style={{
-            font: "inherit",
-            color: name ? "var(--ink)" : "var(--ink-30)",
-            border: "none",
-            borderBottom: "0.5px solid var(--gilded)",
-            background: "transparent",
-            outline: "none",
-            minWidth: isMobile ? 160 : 180,
-            textAlign: "right",
-            paddingRight: 6,
-            paddingBottom: 4,
-            letterSpacing: "-0.01em",
-          }}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
         />
-        <span style={{ color: "var(--ink-50)" }}>.pragueconnect.eth</span>
       </div>
+
       <div
-        className="t-mono"
+        className="mono-caps"
         style={{
-          fontSize: 11,
-          color:
-            claimState === "taken"
-              ? "var(--vermilion)"
-              : claimState === "checking"
-              ? "var(--ink-50)"
-              : "var(--verdigris)",
-          letterSpacing: "0.06em",
+          color: statusColor,
           textAlign: "center",
-          marginBottom: 28,
+          marginBottom: 24,
           minHeight: 14,
+          letterSpacing: "0.18em",
         }}
       >
-        {!ready
-          ? "…"
-          : !name
-          ? t("onboard.choose")
-          : claimState === "checking"
-          ? t("onboard.checking")
-          : claimState === "claiming"
-          ? "…"
-          : claimState === "claimed"
-          ? `✓ ${name}.pragueconnect.eth ✓`
-          : claimState === "sealing-stealth"
-          ? "…"
-          : claimState === "fully-sealed"
-          ? `✓ ${name}.pragueconnect.eth ✓`
-          : claimState === "taken"
-          ? `${name}.pragueconnect.eth ${t("onboard.taken")}`
-          : claimState === "available"
-          ? `✓ ${name}.pragueconnect.eth ${t("onboard.available")}`
-          : ""}
+        {statusLine}
       </div>
 
-      {/* Beat 2 — live-preview parchment. Hidden once the user is mid-claim so
-          the InscriptionStage owns the stage. */}
-      {claimState !== "claiming" &&
-        claimState !== "claimed" &&
-        claimState !== "sealing-stealth" &&
-        claimState !== "fully-sealed" && (
-          <div style={{ marginBottom: 24 }}>
-            <LivePreviewParchment
-              name={name}
-              available={claimState === "available"}
-            />
-          </div>
-        )}
-
-      <button
-        type="button"
-        onClick={onSeal}
-        disabled={
-          claimState === "claiming" ||
-          claimState === "sealing-stealth" ||
-          claimState === "taken" ||
-          !ready ||
-          !name
-        }
-        style={{
-          width: "100%",
-          padding: isMobile ? 16 : 18,
-          background: claimState === "claimed" ? "var(--verdigris)" : "var(--ink)",
-          color: "var(--parchment)",
-          fontFamily: "var(--display)",
-          fontSize: isMobile ? 13 : 14,
-          letterSpacing: "0.3em",
-          cursor:
-            claimState === "claiming" || claimState === "sealing-stealth"
-              ? "wait"
-              : claimState === "taken" || !name
-              ? "not-allowed"
-              : "pointer",
-          opacity: !ready || !name || claimState === "taken" ? 0.5 : 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 14,
-        }}
-      >
-        {!authenticated ? (
-          t("onboard.button.seal")
-        ) : claimState === "fully-sealed" ? (
-          <>
-            <FleurDeLis size={16} stroke="var(--parchment)" /> ✓
-          </>
-        ) : claimState === "sealing-stealth" ? (
-          "…"
-        ) : claimState === "claimed" ? (
-          "…"
-        ) : claimState === "claiming" ? (
-          "…"
-        ) : !name ? (
-          t("onboard.button.seal")
-        ) : (
-          `${t("onboard.button.claim")} ${name.toUpperCase()}.PRAGUECONNECT.ETH`
-        )}
-      </button>
+      <div style={{ maxWidth: 460, margin: "0 auto" }}>
+        <button
+          type="button"
+          onClick={onSeal}
+          disabled={
+            claimInFlight ||
+            claimState === "taken" ||
+            !ready ||
+            !name
+          }
+          className="btn btn-ink btn-block btn-lg"
+          style={{
+            opacity: !ready || !name || claimState === "taken" ? 0.55 : 1,
+            cursor: claimInFlight ? "wait" : !name || claimState === "taken" ? "not-allowed" : "pointer",
+          }}
+        >
+          {sealLabel}
+        </button>
+        <p
+          className="italic"
+          style={{
+            fontSize: 14,
+            color: "var(--ink-70)",
+            marginTop: 14,
+            marginBottom: 0,
+            textAlign: "center",
+            lineHeight: 1.5,
+          }}
+        >
+          {!authenticated ? t("onboard.help.signedout") : t("onboard.help.signedin")}
+        </p>
+      </div>
 
       {errorMsg && (
         <div
-          className="t-italic"
+          className="italic"
           style={{
-            fontSize: 12,
+            fontSize: 13,
             color: "var(--vermilion)",
-            marginTop: 10,
+            marginTop: 14,
             textAlign: "center",
             lineHeight: 1.5,
           }}
@@ -364,50 +308,22 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         </div>
       )}
 
-      <div
-        className="t-italic"
-        style={{
-          fontSize: 12,
-          color: "var(--ink-70)",
-          marginTop: 14,
-          lineHeight: 1.5,
-          textAlign: "center",
-        }}
-      >
-        {!authenticated ? t("onboard.help.signedout") : t("onboard.help.signedin")}
-      </div>
-
       {authenticated && (
-        <button
-          type="button"
-          onClick={logout}
-          style={{
-            display: "block",
-            margin: "16px auto 0",
-            background: "transparent",
-            color: "var(--ink-50)",
-            fontFamily: "var(--display)",
-            fontSize: 10,
-            letterSpacing: "0.3em",
-          }}
-        >
-          sign out
-        </button>
+        <div style={{ textAlign: "center", marginTop: 14 }}>
+          <button type="button" onClick={logout} className="btn btn-text">
+            sign out
+          </button>
+        </div>
       )}
 
-      {(claimState === "claiming" ||
-        claimState === "claimed" ||
-        claimState === "sealing-stealth" ||
-        claimState === "fully-sealed" ||
-        claimState === "error") &&
-        !showSealedBeat && (
-          <InscriptionStage
-            name={name}
-            state={mapToInscription(claimState)}
-            errorMsg={errorMsg}
-            lang={lang}
-          />
-        )}
+      {showStage && !showSealedBeat && (
+        <InscriptionStage
+          name={name}
+          state={mapToInscription(claimState)}
+          errorMsg={errorMsg}
+          lang={lang}
+        />
+      )}
 
       {showPromise && (
         <PromiseCard

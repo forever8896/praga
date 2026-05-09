@@ -1,87 +1,72 @@
 "use client";
 
-// Beat 5 of the onboarding journey. After the inscription animation completes
-// AND both the claim + stealth-route APIs have settled, this full-screen beat
-// replaces the silent setTimeout redirect with a punctuation: the user's name
-// in display caps, a single pressed wax seal, and 2-3 wax-stamp CTAs that
-// branch on whether they were sealed-by an inviter.
+// Beat 5 — celebratory finale. The user's name in display caps, a single
+// pressed wax seal, primary/secondary CTAs that branch on inviter, then
+// the three unopened invite seals to pass on. Uses the new design system
+// (.cartouche, .kicker, .display, .btn-vermilion, .btn-ink, .btn-outline).
 //
-//   sealed-by present → "Send <Inviter> a thank-you" (primary)
-//                     + "Post your first offer"
-//                     + "View your seal"
-//   solo claim        → "Post your first offer" (primary)
-//                     + "View your seal"
-//
-// All CTAs hand off to existing routes; the Reciprocate cartouche auto-mounts
-// when the user lands back on their own profile, so the inviter path lands
-// in the cinematic press-and-hold flow without us having to reproduce it here.
+//   sealed-by present → "Send <Inviter> a thank-you" (vermilion)
+//                     + "Post your first offer" (ink)
+//                     + "View your seal" (outline)
+//   solo claim        → "Post your first offer" (vermilion)
+//                     + "View your seal" (outline)
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useState } from "react";
 import { CropsSeal, FleurDeLis, WaxSeal } from "./ornaments";
 
-function InviteCodeBlock({
-  codes,
-  kicker,
-  body,
+function InviteCodeRow({
+  url,
   copyLabel,
   copiedLabel,
 }: {
-  codes: string[];
-  kicker: string;
-  body: string;
+  url: string;
   copyLabel: string;
   copiedLabel: string;
 }) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   return (
-    <div style={{ marginTop: 32, padding: "20px 18px", border: "0.5px solid var(--gilded)", background: "var(--bone)" }}>
-      <div className="t-display" style={{ fontSize: 10, letterSpacing: "0.4em", color: "var(--vermilion)", textAlign: "center", marginBottom: 8 }}>
-        {kicker}
-      </div>
-      <p className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", textAlign: "center", marginBottom: 16, lineHeight: 1.55 }}>
-        {body}
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {codes.map((code) => {
-          const url = `${origin}/i/${code}`;
-          const isCopied = copiedCode === code;
-          return (
-            <div key={code} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", border: "0.5px solid var(--gilded)", background: "var(--parchment)" }}>
-              <span className="t-mono" style={{ flex: 1, fontSize: 12, color: "var(--ink)", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {url}
-              </span>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(url);
-                    setCopiedCode(code);
-                    setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 1800);
-                  } catch {
-                    /* ignore */
-                  }
-                }}
-                className="t-display"
-                style={{
-                  flex: "0 0 auto",
-                  fontSize: 9,
-                  letterSpacing: "0.25em",
-                  color: isCopied ? "var(--verdigris)" : "var(--vermilion)",
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "4px 6px",
-                }}
-              >
-                {isCopied ? copiedLabel : copyLabel}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 12px",
+        border: "0.5px solid var(--gilded)",
+        background: "var(--parchment)",
+      }}
+    >
+      <span
+        className="mono"
+        style={{
+          flex: 1,
+          fontSize: 12,
+          color: "var(--ink)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {url}
+      </span>
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1800);
+          } catch {
+            /* ignore */
+          }
+        }}
+        className="copy-btn"
+        style={{
+          color: copied ? "var(--verdigris)" : "var(--vermilion)",
+        }}
+      >
+        {copied ? copiedLabel : copyLabel}
+      </button>
     </div>
   );
 }
@@ -111,7 +96,6 @@ export function SealedBeat({
   const copy = lang === "cs"
     ? {
         kicker: "PEČEŤ JE ZAPEČETĚNÁ",
-        byHandOf: "RUKOU",
         thankYou: (firstName: string) => `Poděkovat ${firstName} →`,
         postOffer: "Vyvěsit první nabídku →",
         viewSeal: "Zobrazit svůj pergamen →",
@@ -123,7 +107,6 @@ export function SealedBeat({
       }
     : {
         kicker: "YOUR SEAL IS SEALED",
-        byHandOf: "BY THE HAND OF",
         thankYou: (firstName: string) => `Send ${firstName} a thank-you →`,
         postOffer: "Post your first offer →",
         viewSeal: "View your seal →",
@@ -138,51 +121,111 @@ export function SealedBeat({
 
   return (
     <div role="dialog" aria-label={copy.kicker} style={pageStyle}>
-      <div style={contentStyle}>
-        <FleurDeLis size={28} stroke="var(--gilded)" style={{ margin: "0 auto 12px" }} />
-        <div className="t-display" style={kickerStyle}>{copy.kicker}</div>
-        <div style={{ display: "flex", justifyContent: "center", margin: "16px 0 12px" }}>
+      <div className="container-tight" style={{ paddingTop: 24, textAlign: "center" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+          <FleurDeLis size={26} stroke="var(--gilded)" />
+        </div>
+        <div className="kicker" style={{ marginBottom: 22 }}>{copy.kicker}</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
           <WaxSeal size={84} state="rubedo" rotate={-7} emboss="fleur" />
         </div>
-        <div className="t-display" style={byHandOfStyle}>{copy.byHandOf}</div>
-        <h1 style={nameStyle}>{display}</h1>
-        <div className="t-mono" style={ensStyle}>{ens}</div>
+        <h1
+          className="display"
+          style={{
+            fontSize: "clamp(44px, 11vw, 72px)",
+            color: "var(--ink)",
+            margin: "0 0 8px",
+            letterSpacing: "0.04em",
+          }}
+        >
+          {display}
+        </h1>
+        <div className="mono" style={{ fontSize: 13, color: "var(--ink-70)", marginBottom: 36 }}>
+          {ens}
+        </div>
 
-        <div style={{ height: 36 }} />
-
-        <div style={ctaColumnStyle}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            maxWidth: 380,
+            margin: "0 auto 36px",
+          }}
+        >
           {inviter && inviterFirst && (
             <button
               type="button"
               onClick={() => router.push(profileHref)}
-              className="t-display"
-              style={primaryCtaStyle}
+              className="btn btn-vermilion"
             >
-              <WaxSeal size={20} state="rubedo" rotate={-6} emboss="fleur" />
               {copy.thankYou(inviterFirst)}
             </button>
           )}
           <button
             type="button"
             onClick={() => router.push("/compose")}
-            className="t-display"
-            style={inviter ? secondaryCtaStyle : primaryCtaStyle}
+            className={inviter ? "btn btn-ink" : "btn btn-vermilion"}
           >
-            {!inviter && <WaxSeal size={20} state="rubedo" rotate={-6} emboss="fleur" />}
             {copy.postOffer}
           </button>
-          <Link href={profileHref} className="t-display" style={tertiaryCtaStyle}>
+          <button
+            type="button"
+            onClick={() => router.push(profileHref)}
+            className="btn btn-outline"
+          >
             {copy.viewSeal}
-          </Link>
+          </button>
         </div>
 
         {inviteCodes.length > 0 && (
-          <InviteCodeBlock codes={inviteCodes} kicker={copy.invitesKicker} body={copy.invitesBody} copyLabel={copy.copy} copiedLabel={copy.copied} />
+          <div
+            className="cartouche"
+            style={{ padding: 22, textAlign: "left", marginBottom: 28 }}
+          >
+            <div className="kicker" style={{ marginBottom: 10, textAlign: "center" }}>
+              {copy.invitesKicker}
+            </div>
+            <p
+              className="italic"
+              style={{
+                fontSize: 14,
+                color: "var(--ink-70)",
+                margin: "0 0 16px",
+                textAlign: "center",
+                lineHeight: 1.55,
+              }}
+            >
+              {copy.invitesBody}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {inviteCodes.map((code) => {
+                const origin = typeof window !== "undefined" ? window.location.origin : "";
+                const url = `${origin}/i/${code}`;
+                return (
+                  <InviteCodeRow
+                    key={code}
+                    url={url}
+                    copyLabel={copy.copy}
+                    copiedLabel={copy.copied}
+                  />
+                );
+              })}
+            </div>
+          </div>
         )}
 
-        <div style={{ marginTop: 28, display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}>
-          <CropsSeal size={20} />
-          <span className="t-italic" style={{ fontSize: 11, color: "var(--ink-50)", letterSpacing: "0.04em" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 10,
+            paddingBottom: 24,
+          }}
+        >
+          <CropsSeal size={18} color="var(--gilded-soft)" />
+          <span className="italic" style={{ fontSize: 12, color: "var(--ink-50)" }}>
             {copy.privacy}
           </span>
         </div>
@@ -196,104 +239,12 @@ const pageStyle: React.CSSProperties = {
   inset: 0,
   zIndex: 55,
   background: "var(--parchment)",
-  backgroundImage: "radial-gradient(rgba(31,26,18,0.06) 1px, transparent 1px)",
+  backgroundImage: "var(--grain)",
   backgroundSize: "4px 4px",
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-start",
   justifyContent: "center",
-  padding: 24,
+  padding: "24px 0",
   animation: "pc-narration-fade 600ms cubic-bezier(0.32, 0.72, 0.24, 1)",
   overflow: "auto",
-};
-
-const contentStyle: React.CSSProperties = {
-  width: "100%",
-  maxWidth: 540,
-  textAlign: "center",
-  padding: "32px 0",
-};
-
-const kickerStyle: React.CSSProperties = {
-  fontSize: 11,
-  letterSpacing: "0.4em",
-  color: "var(--vermilion)",
-  textTransform: "uppercase",
-};
-
-const byHandOfStyle: React.CSSProperties = {
-  fontSize: 10,
-  letterSpacing: "0.4em",
-  color: "var(--ink-50)",
-  textTransform: "uppercase",
-  marginTop: 8,
-};
-
-const nameStyle: React.CSSProperties = {
-  fontFamily: "var(--display)",
-  fontSize: "clamp(48px, 11vw, 72px)",
-  letterSpacing: "0.04em",
-  lineHeight: 1.0,
-  color: "var(--ink)",
-  margin: "8px 0 6px",
-  fontWeight: 500,
-};
-
-const ensStyle: React.CSSProperties = {
-  fontSize: 13,
-  color: "var(--ink-70)",
-  letterSpacing: "0.02em",
-};
-
-const ctaColumnStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-  alignItems: "stretch",
-  maxWidth: 360,
-  margin: "0 auto",
-};
-
-const primaryCtaStyle: React.CSSProperties = {
-  padding: "14px 18px",
-  background: "var(--vermilion)",
-  color: "var(--parchment)",
-  fontSize: 12,
-  letterSpacing: "0.3em",
-  border: "none",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 12,
-  textDecoration: "none",
-  textAlign: "center",
-};
-
-const secondaryCtaStyle: React.CSSProperties = {
-  padding: "12px 18px",
-  background: "var(--ink)",
-  color: "var(--parchment)",
-  fontSize: 11,
-  letterSpacing: "0.3em",
-  border: "none",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 10,
-  textDecoration: "none",
-  textAlign: "center",
-};
-
-const tertiaryCtaStyle: React.CSSProperties = {
-  padding: "10px 16px",
-  background: "transparent",
-  color: "var(--ink-70)",
-  fontSize: 11,
-  letterSpacing: "0.3em",
-  border: "0.5px solid var(--gilded)",
-  cursor: "pointer",
-  display: "block",
-  textDecoration: "none",
-  textAlign: "center",
 };

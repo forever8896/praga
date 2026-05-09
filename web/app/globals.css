@@ -1,52 +1,80 @@
-/* PragueConnect — Rudolfine Workshop tokens. Ported from /design/tokens.css. */
-:root {
-  --ink: #0F0E0C;
-  --parchment: #F4ECD8;
-  --bone: #E6DCC4;
-  --vermilion: #B23A2F;
-  --vermilion-deep: #8C2A22;
-  --lapis: #1F3A6E;
-  --gilded: #C8A24A;
-  --gilded-soft: #B59140;
-  --verdigris: #3E6B5A;
+/* PragueConnect — Rudolfine Workshop letterpress system
+ * Source of truth ported from the Claude Design handoff. */
 
-  --ink-70: rgba(15, 14, 12, 0.70);
-  --ink-50: rgba(15, 14, 12, 0.50);
-  --ink-30: rgba(15, 14, 12, 0.30);
-  --ink-15: rgba(15, 14, 12, 0.15);
-  --ink-08: rgba(15, 14, 12, 0.08);
+:root {
+  --parchment: #F4ECD8;
+  --bone: #EFE5CB;
+  --ink: #1F1A12;
+  --ink-90: rgba(31,26,18,0.90);
+  --ink-70: rgba(31,26,18,0.70);
+  --ink-50: rgba(31,26,18,0.50);
+  --ink-30: rgba(31,26,18,0.30);
+  --ink-15: rgba(31,26,18,0.15);
+  --ink-08: rgba(31,26,18,0.08);
+  --vermilion: #B23A2F;
+  --vermilion-soft: rgba(178,58,47,0.10);
+  --vermilion-wash: rgba(178,58,47,0.06);
+  --vermilion-deep: #8C2A22;
+  --gilded: #B79F4E;
+  --gilded-soft: #BFA963;
+  --verdigris: #527260;
+  --lapis: #1F3A6E;
 
   /* font families resolved via next/font CSS variables in layout.tsx */
-  --display: var(--font-display), 'Cormorant Garamond', 'Trajan Pro', serif;
-  --body: var(--font-body), 'EB Garamond', 'Garamond', 'Caslon Pro', Georgia, serif;
-  --ceremonial: var(--font-ceremonial), 'UnifrakturCook', 'UnifrakturMaguntia', serif;
-  --mono: var(--font-mono), 'JetBrains Mono', 'iA Writer Mono', ui-monospace, monospace;
+  --font-display: var(--font-display-fallback), 'Cormorant Garamond', Georgia, serif;
+  --font-body: var(--font-body-fallback), 'EB Garamond', 'Garamond', Georgia, serif;
+  --font-mono: var(--font-mono-fallback), 'JetBrains Mono', ui-monospace, monospace;
+  --font-ceremonial: var(--font-ceremonial-fallback), 'UnifrakturCook', serif;
+
+  /* legacy aliases — older code still references these */
+  --display: var(--font-display);
+  --body: var(--font-body);
+  --mono: var(--font-mono);
+  --ceremonial: var(--font-ceremonial);
+
+  --grain: radial-gradient(circle at 1px 1px, rgba(31,26,18,0.06) 1px, transparent 0);
 }
+
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
   background: var(--parchment);
-}
-body {
-  font-family: var(--body);
   color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
-*, *::before, *::after { box-sizing: border-box; }
 
-button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
-input, textarea { font: inherit; color: inherit; }
+button {
+  font-family: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  -webkit-appearance: none;
+}
+
 a { color: inherit; text-decoration: none; }
+
+/* ============== Page surfaces ============== */
 
 .parchment-surface {
   background-color: var(--parchment);
-  background-image:
-    radial-gradient(rgba(176, 138, 78, 0.05) 1px, transparent 1px),
-    radial-gradient(rgba(120, 90, 50, 0.04) 1px, transparent 1px);
-  background-size: 3px 3px, 7px 7px;
-  background-position: 0 0, 1px 2px;
+  background-image: var(--grain);
+  background-size: 4px 4px;
 }
 .bone-surface { background-color: var(--bone); }
 .ink-surface {
@@ -56,29 +84,314 @@ a { color: inherit; text-decoration: none; }
   background-size: 4px 4px;
 }
 
-.t-display {
-  font-family: var(--display);
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-feature-settings: 'smcp' on;
+.page {
+  background: var(--parchment);
+  background-image: var(--grain);
+  background-size: 4px 4px;
+  min-height: 100%;
+  color: var(--ink);
+  font-size: 16px;
 }
-.t-display-tight { letter-spacing: 0.04em; }
-.t-body { font-family: var(--body); font-weight: 400; }
-.t-italic { font-family: var(--body); font-style: italic; font-weight: 400; }
-.t-mono { font-family: var(--mono); font-weight: 400; letter-spacing: -0.01em; }
-.t-cer { font-family: var(--ceremonial); font-weight: 400; }
 
-.hr-gilded { height: 0; border: 0; border-top: 0.5px solid var(--gilded); opacity: 0.7; }
+/* ============== Type primitives ============== */
+
+.kicker {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+}
+
+.kicker-soft {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gilded-soft);
+}
+
+.kicker-ink {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.mono-caps {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.italic {
+  font-style: italic;
+  font-family: var(--font-body);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  line-height: 1.05;
+}
+
+.cta-caps {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* legacy classes — kept so existing code compiles. New code: prefer .display / .italic / .mono / .kicker */
+.t-display { font-family: var(--font-display); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+.t-display-tight { letter-spacing: 0.04em; }
+.t-body { font-family: var(--font-body); font-weight: 400; }
+.t-italic { font-family: var(--font-body); font-style: italic; font-weight: 400; }
+.t-mono { font-family: var(--font-mono); font-weight: 400; letter-spacing: -0.01em; }
+.t-cer { font-family: var(--font-ceremonial); font-weight: 400; }
+
+/* ============== Rules ============== */
+
+.hr-gilded {
+  height: 0;
+  border: none;
+  border-top: 0.5px solid var(--gilded);
+  margin: 0;
+}
+
 .hr-double {
-  height: 3px; border: 0;
+  height: 5px;
+  border: none;
   border-top: 0.5px solid var(--gilded);
   border-bottom: 0.5px solid var(--gilded);
-  opacity: 0.7;
+  margin: 0;
+}
+
+.hr-vermilion {
+  height: 0;
+  border: none;
+  border-top: 0.5px solid var(--vermilion);
+  margin: 0;
+}
+
+.hr-ink {
+  height: 0;
+  border: none;
+  border-top: 0.5px solid var(--ink-30);
+  margin: 0;
+}
+
+/* ============== Buttons ============== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, transform 80ms ease;
+  min-height: 48px;
+  padding: 0 24px;
+  white-space: nowrap;
+}
+
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-ink { background: var(--ink); color: var(--parchment); }
+.btn-ink:hover { background: #2a2418; }
+
+.btn-vermilion { background: var(--vermilion); color: var(--parchment); }
+.btn-vermilion:hover { background: #c14237; }
+
+.btn-outline { background: transparent; color: var(--ink); border: 0.5px solid var(--ink); }
+.btn-outline:hover { background: var(--ink-08); }
+
+.btn-text { background: transparent; color: var(--ink-50); font-size: 11px; min-height: 32px; padding: 0 8px; }
+.btn-text:hover { color: var(--ink); }
+
+.btn-block { width: 100%; }
+.btn-sm { min-height: 36px; padding: 0 14px; font-size: 10px; }
+.btn-lg { min-height: 56px; padding: 0 28px; font-size: 13px; }
+
+/* ============== Inputs ============== */
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+
+.field-label {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gilded-soft);
+}
+
+.field-input,
+.field-textarea {
+  border: none;
+  border-bottom: 0.5px solid var(--gilded);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 17px;
+  color: var(--ink);
+  padding: 8px 0;
+  border-radius: 0;
+  transition: border-color 160ms ease;
+  width: 100%;
+}
+
+.field-input:focus,
+.field-textarea:focus {
+  border-bottom: 1px solid var(--vermilion);
+}
+
+.field-textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
+
+.field-counter {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-50);
+  align-self: flex-end;
+}
+
+.field-help { font-style: italic; font-size: 13px; color: var(--ink-50); }
+
+/* ============== Cartouche ============== */
+
+.cartouche {
+  background: var(--bone);
+  border: 0.5px solid var(--gilded);
+  padding: 24px;
+}
+
+.cartouche-parchment {
+  background: var(--parchment);
+  border: 0.5px solid var(--gilded);
+  padding: 24px;
+}
+
+.cartouche-vermilion {
+  background: var(--parchment);
+  border: 0.5px solid var(--vermilion);
+  padding: 20px;
+}
+
+/* ============== Chip ============== */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border: 0.5px solid var(--gilded);
+  color: var(--ink-70);
+  background: transparent;
+  cursor: pointer;
+  transition: all 160ms ease;
+  min-height: 32px;
+  white-space: nowrap;
+}
+
+.chip-active { background: var(--vermilion); border-color: var(--vermilion); color: var(--parchment); }
+.chip-status { border-color: var(--ink-30); cursor: default; }
+.chip-verdigris { border-color: var(--verdigris); color: var(--verdigris); }
+.chip-vermilion { border-color: var(--vermilion); color: var(--vermilion); }
+
+/* ============== Containers ============== */
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.container-tight {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.container-wide {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ============== Animations ============== */
+
+@keyframes pc-narration-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pc-letter-draw {
+  from { opacity: 0; transform: translateY(6px); filter: blur(0.4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes pc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pc-modal-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pc-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes pc-inherit-slide-up {
+  from { transform: translateY(120%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.fade-in { animation: pc-narration-fade 280ms cubic-bezier(0.32,0.72,0.24,1) both; }
+
+/* ============== Drop cap ============== */
+
+.drop-cap::first-letter {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 88px;
+  line-height: 0.85;
+  float: left;
+  margin: 6px 12px -2px 0;
+  color: var(--vermilion);
 }
 
 .dropcap::first-letter {
-  font-family: var(--display);
+  font-family: var(--font-display);
   font-size: 4.2em;
   line-height: 0.9;
   float: left;
@@ -87,41 +400,165 @@ a { color: inherit; text-decoration: none; }
   font-weight: 600;
 }
 
-@media (max-width: 1439px) { .desktop-only { display: none !important; } }
-@media (min-width: 1440px) { .mobile-only { display: none !important; } }
+/* ============== Layout helpers ============== */
 
-/* Constrain ultra-wide stretching on desktop variants. */
-.desktop-only.parchment-surface,
-.parchment-surface.desktop-only {
-  max-width: 1440px;
-  margin-left: auto;
-  margin-right: auto;
+.stack { display: flex; flex-direction: column; }
+.row { display: flex; flex-direction: row; }
+.center { display: flex; align-items: center; justify-content: center; }
+.between { display: flex; align-items: center; justify-content: space-between; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ============== Copy button ============== */
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  cursor: pointer;
+  padding: 4px 8px;
+  border: 0.5px solid var(--vermilion);
+  background: transparent;
+  transition: all 160ms ease;
+}
+.copy-btn:hover { background: var(--vermilion-wash); }
+.copy-btn-copied { color: var(--verdigris); border-color: var(--verdigris); }
+
+/* ============== Portrait roundel ============== */
+
+.portrait {
+  border-radius: 50%;
+  background: var(--bone);
+  border: 0.5px solid var(--gilded);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--ink);
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-/* Inheritance pull-tab — slides up from the foot of a public profile page. */
-@keyframes pc-inherit-slide-up {
-  from { transform: translateY(120%); opacity: 0; }
-  to   { transform: translateY(0); opacity: 1; }
+/* ============== Sticky bottom CTA on mobile ============== */
+
+.sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(to top, var(--parchment) 70%, rgba(244,236,216,0));
+  padding: 16px 20px 20px;
+  margin-top: 20px;
+  z-index: 10;
 }
 
-/* Inscription animation — chiseling letters into parchment, then narration lines. */
-@keyframes pc-letter-draw {
-  from { opacity: 0; transform: translateY(2px); filter: blur(0.4px); }
-  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
-}
-@keyframes pc-narration-fade {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* ============== Marginalia (desktop side gutters) ============== */
 
-/* ======================================================================
-   Navbar — engraved-manuscript header with logo, links, sign-in/out
-   ====================================================================== */
-
-.navbar-shell {
-  /* Hairlines render via .navbar-rule below to keep the engraved-double feel */
+.marginalia {
+  position: absolute;
+  width: 140px;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
+.marginalia-cap {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 11px;
+  color: var(--ink-50);
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* hide marginalia on tablet & below */
+@media (max-width: 1024px) {
+  .marginalia { display: none; }
+}
+
+/* ============== Responsive helpers ============== */
+
+@media (max-width: 1023px) { .desktop-only { display: none !important; } }
+@media (min-width: 1024px) { .mobile-only { display: none !important; } }
+
+/* ============== Navbar (in-app) ============== */
+
+.appnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--parchment);
+  border-bottom: 0.5px solid transparent;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  transition: border-color 200ms ease;
+}
+
+.appnav-scrolled { border-bottom-color: var(--gilded); }
+
+.appnav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.appnav-links {
+  display: none;
+  gap: 28px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.appnav-link {
+  color: var(--ink-70);
+  cursor: pointer;
+  padding: 8px 0;
+  border-bottom: 0.5px solid transparent;
+  text-decoration: none;
+}
+.appnav-link:hover { color: var(--ink); }
+.appnav-link-active { color: var(--ink); border-bottom-color: var(--vermilion); }
+
+.appnav-burger {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.appnav-burger span {
+  display: block;
+  height: 0.5px;
+  background: var(--ink);
+  width: 22px;
+}
+
+.appnav-burger span:nth-child(2) { width: 16px; }
+
+@media (min-width: 900px) {
+  .appnav-links { display: flex; }
+  .appnav-burger { display: none; }
+}
+
+/* legacy navbar shell — pre-design, kept for current Navbar component */
+
+.navbar-shell {}
 .navbar-inner {
   max-width: 1440px;
   margin: 0 auto;
@@ -146,15 +583,10 @@ a { color: inherit; text-decoration: none; }
 }
 .navbar-brand:hover { opacity: 0.85; }
 
-.navbar-logo {
-  height: 44px;
-  width: auto;
-  display: block;
-}
-@media (min-width: 768px) { .navbar-logo { height: 56px; } }
-@media (min-width: 1200px) { .navbar-logo { height: 64px; } }
+.navbar-logo { height: 36px; width: auto; display: block; }
+@media (min-width: 768px) { .navbar-logo { height: 44px; } }
+@media (min-width: 1200px) { .navbar-logo { height: 52px; } }
 
-/* Desktop link cluster sits centred on the engraved line */
 .navbar-desktop {
   display: flex;
   align-items: center;
@@ -163,7 +595,7 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
 }
 .navbar-link {
-  font-family: var(--body);
+  font-family: var(--font-body);
   font-style: italic;
   font-size: 15px;
   color: var(--ink-70);
@@ -176,9 +608,7 @@ a { color: inherit; text-decoration: none; }
 .navbar-link::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 0; right: 0; bottom: 0;
   height: 0.5px;
   background: var(--vermilion);
   transform: scaleX(0);
@@ -196,7 +626,6 @@ a { color: inherit; text-decoration: none; }
   flex: 0 0 auto;
 }
 
-/* My-ENS chip — small wax-pill containing the user's seal */
 .navbar-myens {
   display: inline-flex;
   align-items: center;
@@ -211,19 +640,9 @@ a { color: inherit; text-decoration: none; }
   background: rgba(184, 158, 78, 0.08);
   transition: background 180ms ease, border-color 180ms ease;
 }
-.navbar-myens:hover {
-  background: rgba(184, 158, 78, 0.16);
-  border-color: var(--ink-70);
-}
-.navbar-myens-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--vermilion);
-  display: inline-block;
-}
+.navbar-myens:hover { background: rgba(184, 158, 78, 0.16); border-color: var(--ink-70); }
+.navbar-myens-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--vermilion); display: inline-block; }
 
-/* Sign-in: wax-stamp button — solid, ink, vermilion press feedback */
 .navbar-signin {
   font-size: 11px;
   letter-spacing: 0.3em;
@@ -237,7 +656,6 @@ a { color: inherit; text-decoration: none; }
 .navbar-signin:hover { background: var(--vermilion); }
 .navbar-signin:active { transform: scale(0.97); }
 
-/* Sign-out: hairline pill, low priority */
 .navbar-signout {
   font-size: 10px;
   letter-spacing: 0.25em;
@@ -250,7 +668,6 @@ a { color: inherit; text-decoration: none; }
 }
 .navbar-signout:hover { color: var(--vermilion); }
 
-/* Mobile burger — animated three lines that morph into × */
 .navbar-burger {
   position: relative;
   width: 40px;
@@ -270,34 +687,16 @@ a { color: inherit; text-decoration: none; }
   width: 18px;
   height: 0.75px;
   background: var(--ink);
-  transition:
-    transform 240ms cubic-bezier(0.32, 0.72, 0.24, 1),
-    opacity 200ms ease;
+  transition: transform 240ms cubic-bezier(0.32, 0.72, 0.24, 1), opacity 200ms ease;
 }
 .navbar-burger-x1 { transform: translateY(5.75px) rotate(45deg); }
 .navbar-burger-x2 { transform: translateY(-5.75px) rotate(-45deg); }
 .navbar-burger-fade { opacity: 0; transform: scaleX(0); }
 
-/* The double engraved rule beneath the navbar */
-.navbar-rule {
-  position: relative;
-  height: 4px;
-}
-.navbar-rule-thick {
-  position: absolute;
-  left: 0; right: 0; top: 0;
-  height: 0.5px;
-  background: var(--gilded);
-}
-.navbar-rule-thin {
-  position: absolute;
-  left: 0; right: 0; top: 3px;
-  height: 0.5px;
-  background: var(--gilded);
-  opacity: 0.45;
-}
+.navbar-rule { position: relative; height: 4px; }
+.navbar-rule-thick { position: absolute; left: 0; right: 0; top: 0; height: 0.5px; background: var(--gilded); }
+.navbar-rule-thin { position: absolute; left: 0; right: 0; top: 3px; height: 0.5px; background: var(--gilded); opacity: 0.45; }
 
-/* Mobile flyout — a hand-drafted column of links */
 .navbar-mobile-menu {
   border-top: 0.5px solid var(--gilded);
   background: var(--parchment);
@@ -308,7 +707,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 12px;
   padding: 14px 0;
-  font-family: var(--body);
+  font-family: var(--font-body);
   font-style: italic;
   font-size: 17px;
   color: var(--ink);
@@ -339,7 +738,6 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.04em;
 }
 
-/* Navbar responsive helpers — desktop links + mobile burger. */
 @media (max-width: 767px) {
   .navbar-desktop { display: none !important; }
   .navbar-myens { display: none !important; }
@@ -348,4 +746,26 @@ a { color: inherit; text-decoration: none; }
 @media (min-width: 768px) {
   .navbar-burger { display: none !important; }
   .navbar-mobile-menu { display: none !important; }
+}
+
+/* ============== Footer (in-app) ============== */
+
+.appfoot {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--ink-50);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.appfoot-links {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-50);
 }

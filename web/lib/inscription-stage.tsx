@@ -1,21 +1,15 @@
 "use client";
 
-// Inscription overlay — shown while /api/claim-name is in flight.
-// Replaces the spinner with a chiseling-letters ceremony:
-//   1) the chosen name carves into parchment letter-by-letter (~1.7s)
-//   2) three lines of italic narration fade in below, in order
-//   3) on success, parent navigates after a minimum cinematic dwell
-//   4) on error, dissolve to a broken-seal vignette
-//
-// All timing is CSS-driven; this component owns no animation engine.
-import { useEffect, useRef, useState } from "react";
+// Beat 4 — inscription overlay shown while /api/claim-name is in flight.
+// Letter-by-letter carving via pc-letter-draw, three lines of narration that
+// fade in sequentially, status in mono-caps at the bottom. Error path falls
+// to a broken WaxSeal vignette. Uses .kicker, .italic, .mono-caps, .display.
 import { FleurDeLis, WaxSeal } from "./ornaments";
 
 const PER_LETTER_MS = 60;
 const LETTER_DRAW_MS = 250;
-const NARRATION_GAP_1_MS = 200;
-const NARRATION_GAP_2_MS = 700;
-const NARRATION_GAP_3_MS = 1200;
+const NARRATION_DELAY_BASE_MS = 200;
+const NARRATION_STEP_MS = 350;
 
 export const INSCRIPTION_MIN_DWELL_MS = 2400;
 
@@ -44,14 +38,27 @@ export function InscriptionStage({
   errorMsg?: string | null;
   lang?: "en" | "cs";
 }) {
-  const fullText = `${name}.pragueconnect.eth`;
-  const letters = fullText.split("");
+  const carved = name || (lang === "cs" ? "vašejméno" : "yourname");
+  const letters = carved.split("");
   const carveCompleteAt = letters.length * PER_LETTER_MS + LETTER_DRAW_MS;
   const lines = lang === "cs" ? NARRATIONS_CS : NARRATIONS_EN;
 
   if (state === "error") {
-    return <ErrorVignette message={errorMsg} />;
+    return <ErrorVignette message={errorMsg} lang={lang} />;
   }
+
+  const phaseLabel =
+    state === "carving"
+      ? lang === "cs"
+        ? "ZAPEČEŤUJI"
+        : "INSCRIBING"
+      : state === "sealing"
+      ? lang === "cs"
+        ? "TRASA SOUKROMÝCH DARŮ"
+        : "SEALING THE GIFT ROUTE"
+      : lang === "cs"
+      ? "ZAPEČETĚNO"
+      : "SEALED";
 
   return (
     <div
@@ -62,32 +69,30 @@ export function InscriptionStage({
         inset: 0,
         zIndex: 50,
         background: "var(--parchment)",
-        backgroundImage: "radial-gradient(rgba(31,26,18,0.06) 1px, transparent 1px)",
+        backgroundImage: "var(--grain)",
         backgroundSize: "4px 4px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "24px",
-        animation: "pc-narration-fade 280ms ease-out",
+        padding: 32,
+        animation: "pc-fade-in 280ms ease-out",
       }}
     >
-      <FleurDeLis size={32} style={{ marginBottom: 28, opacity: 0.75 }} />
+      <FleurDeLis size={32} stroke="var(--gilded)" />
+      <div style={{ height: 28 }} />
 
-      {/* The chiseled inscription */}
       <div
+        className="display"
         style={{
-          fontFamily: "var(--display)",
-          fontSize: "clamp(28px, 7vw, 56px)",
-          letterSpacing: "0.04em",
+          fontSize: "clamp(36px, 9vw, 64px)",
           color: "var(--ink)",
           textAlign: "center",
-          lineHeight: 1.05,
-          marginBottom: 8,
+          letterSpacing: "0.02em",
           maxWidth: "92vw",
           wordBreak: "break-word",
         }}
-        aria-label={fullText}
+        aria-label={carved}
       >
         {letters.map((ch, i) => (
           <span
@@ -95,7 +100,7 @@ export function InscriptionStage({
             style={{
               display: "inline-block",
               opacity: 0,
-              animation: `pc-letter-draw ${LETTER_DRAW_MS}ms cubic-bezier(0.32, 0.72, 0.24, 1) ${
+              animation: `pc-letter-draw ${LETTER_DRAW_MS}ms cubic-bezier(0.32,0.72,0.24,1) ${
                 i * PER_LETTER_MS
               }ms forwards`,
             }}
@@ -105,83 +110,82 @@ export function InscriptionStage({
         ))}
       </div>
 
-      {/* A faint hairline below — the inscription line */}
-      <div
+      <div style={{ height: 16 }} />
+
+      <hr
+        className="hr-gilded"
         style={{
-          width: "min(420px, 80vw)",
-          borderTop: "0.5px solid var(--gilded)",
+          width: 80,
           opacity: 0,
-          animation: `pc-narration-fade 600ms ease-out ${carveCompleteAt}ms forwards`,
-          marginBottom: 36,
+          animation: `pc-fade-in 400ms ease-out ${carveCompleteAt}ms forwards`,
         }}
       />
 
-      {/* Three narration lines — fade in sequentially */}
-      <div style={{ textAlign: "center", maxWidth: 520, padding: "0 12px" }}>
-        {lines.map((line, idx) => {
-          const delay =
-            carveCompleteAt +
-            (idx === 0
-              ? NARRATION_GAP_1_MS
-              : idx === 1
-              ? NARRATION_GAP_1_MS + NARRATION_GAP_2_MS
-              : NARRATION_GAP_1_MS + NARRATION_GAP_2_MS + NARRATION_GAP_3_MS);
-          return (
-            <p
-              key={idx}
-              className="t-italic"
-              style={{
-                fontSize: 16,
-                lineHeight: 1.5,
-                color: "var(--ink-70)",
-                margin: "10px 0",
-                opacity: 0,
-                animation: `pc-narration-fade 700ms ease-out ${delay}ms forwards`,
-              }}
-            >
-              {line}
-            </p>
-          );
-        })}
+      <div style={{ height: 28 }} />
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          textAlign: "center",
+          maxWidth: 360,
+          padding: "0 12px",
+        }}
+      >
+        {lines.map((line, idx) => (
+          <p
+            key={idx}
+            className="italic"
+            style={{
+              fontSize: 15,
+              color: "var(--ink-70)",
+              margin: 0,
+              lineHeight: 1.5,
+              opacity: 0,
+              animation: `pc-narration-fade 280ms ease-out ${
+                carveCompleteAt + NARRATION_DELAY_BASE_MS + idx * NARRATION_STEP_MS
+              }ms forwards`,
+            }}
+          >
+            {line}
+          </p>
+        ))}
       </div>
 
-      {/* Tiny status footer — what the system is actually doing right now */}
       <div
         style={{
           position: "absolute",
-          bottom: 28,
+          bottom: 32,
           left: 0,
           right: 0,
           textAlign: "center",
         }}
       >
         <span
-          className="t-mono"
-          style={{
-            fontSize: 10,
-            letterSpacing: "0.25em",
-            color: "var(--ink-50)",
-            textTransform: "uppercase",
-          }}
+          className="mono-caps"
+          style={{ color: "var(--ink)", fontSize: 11, letterSpacing: "0.25em" }}
         >
-          {state === "carving"
-            ? lang === "cs"
-              ? "ZAPEČEŤUJI"
-              : "INSCRIBING"
-            : state === "sealing"
-            ? lang === "cs"
-              ? "TRASA SOUKROMÝCH DARŮ"
-              : "SEALING THE GIFT ROUTE"
-            : lang === "cs"
-            ? "HOTOVO"
-            : "SEALED"}
+          {phaseLabel}
         </span>
       </div>
     </div>
   );
 }
 
-function ErrorVignette({ message }: { message?: string | null }) {
+function ErrorVignette({
+  message,
+  lang,
+}: {
+  message?: string | null;
+  lang: "en" | "cs";
+}) {
+  const headline = lang === "cs" ? "PEČEŤ SE NEPOVEDLA" : "THE SEAL WOULD NOT TAKE";
+  const fallback =
+    lang === "cs"
+      ? "Spojení s Prahou bylo přerušeno. Jméno nebylo zapečetěno — zkuste to znovu."
+      : "The line to Prague was busy. The name has not been claimed — try again.";
+
   return (
     <div
       role="alertdialog"
@@ -190,47 +194,53 @@ function ErrorVignette({ message }: { message?: string | null }) {
         inset: 0,
         zIndex: 50,
         background: "var(--parchment)",
+        backgroundImage: "var(--grain)",
+        backgroundSize: "4px 4px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "24px",
-        animation: "pc-narration-fade 280ms ease-out",
+        padding: 32,
+        animation: "pc-fade-in 280ms ease-out",
       }}
     >
       <WaxSeal size={120} state="broken" rotate={-8} emboss="none" />
-      <div
-        className="t-display"
-        style={{
-          fontSize: 11,
-          letterSpacing: "0.4em",
-          color: "var(--vermilion)",
-          marginTop: 24,
-          textTransform: "uppercase",
-        }}
-      >
-        the seal would not take
-      </div>
+      <div style={{ height: 24 }} />
+      <div className="kicker" style={{ fontSize: 12 }}>{headline}</div>
       <p
-        className="t-italic"
+        className="italic"
         style={{
-          fontSize: 16,
+          fontSize: 15,
           color: "var(--ink-70)",
           textAlign: "center",
           marginTop: 12,
           maxWidth: 420,
-          lineHeight: 1.5,
+          lineHeight: 1.55,
         }}
       >
-        {message ?? "The line to Prague was busy. The name has not been claimed — try again."}
+        {message ?? fallback}
       </p>
+      <div
+        style={{
+          position: "absolute",
+          bottom: 32,
+          left: 0,
+          right: 0,
+          textAlign: "center",
+        }}
+      >
+        <span
+          className="mono-caps"
+          style={{ color: "var(--vermilion)", fontSize: 11 }}
+        >
+          {lang === "cs" ? "PEČEŤ ROZBITA" : "SEAL BROKEN"}
+        </span>
+      </div>
     </div>
   );
 }
 
-/// Helper used by the parent to ensure the animation gets at least its dwell time.
-/// Returns ms remaining until the inscription's natural completion point, given the
-/// timestamp the carving started.
+/// Helper for the parent to ensure the animation runs for at least its dwell time.
 export function inscriptionRemaining(startMs: number | null): number {
   if (!startMs) return 0;
   const elapsed = Date.now() - startMs;

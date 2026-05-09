@@ -1,148 +1,105 @@
 "use client";
 
-// Beat 2 of the onboarding journey. A tiny live-preview parchment that sits
-// below the inscription input and updates as the user types — gives them a
-// glimpse of the seal they're about to inscribe. Subtly tilts and shifts as
-// the name changes, so the act of typing feels like calligraphy.
+// Beat 2 — the parchment IS the input. The user types directly into the
+// 'BY THE HAND OF' field; status sits in mono-caps beneath. No duplicate
+// input above, no separate "preview" of typed text — the parchment is the
+// only place a name is entered.
+import { useRef } from "react";
 import { CropsSeal, FleurDeLis } from "./ornaments";
 
 export function LivePreviewParchment({
   name,
-  available,
+  filled,
+  onChange,
+  placeholder = "yourname",
 }: {
   name: string;
-  available: boolean;
+  filled: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
 }) {
-  const display = name ? name.charAt(0).toUpperCase() + name.slice(1) : "your name";
-  const ens = name ? `${name}.pragueconnect.eth` : "···.pragueconnect.eth";
-  const dim = !name;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const tilt = filled ? -0.6 : -1.5;
 
   return (
     <div
       style={{
-        position: "relative",
+        width: 300,
+        maxWidth: "100%",
         margin: "0 auto",
-        maxWidth: 280,
-        padding: 0,
-        opacity: dim ? 0.55 : 1,
-        transform: `rotate(${dim ? -1.5 : -0.6}deg) scale(${dim ? 0.97 : 1})`,
-        transition: "opacity 240ms ease, transform 320ms cubic-bezier(0.32, 0.72, 0.24, 1)",
+        transform: `rotate(${tilt}deg)`,
+        transition: "transform 280ms ease",
       }}
     >
       <div
+        className="cartouche-parchment"
         style={{
+          padding: 22,
           position: "relative",
-          padding: "18px 16px 14px",
-          background: available && !dim ? "rgba(244, 236, 216, 1)" : "var(--bone)",
-          border: "0.5px solid var(--gilded)",
-          boxShadow: dim
-            ? "none"
-            : "0 12px 32px -16px rgba(31,26,18,0.20), 0 1px 0 rgba(184,158,78,0.40)",
-          textAlign: "center",
+          boxShadow: "0 8px 18px rgba(31,26,18,0.08)",
+          cursor: "text",
         }}
+        onClick={() => inputRef.current?.focus()}
       >
-        {/* Top fleur */}
-        <FleurDeLis size={14} stroke="var(--gilded)" style={{ margin: "0 auto 4px" }} />
-
-        {/* Kicker */}
+        <div style={{ position: "absolute", top: 8, right: 8, lineHeight: 0 }}>
+          <CropsSeal size={18} color="var(--gilded)" />
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>
+          <FleurDeLis size={16} stroke="var(--gilded)" />
+        </div>
         <div
-          className="t-display"
-          style={{
-            fontSize: 7,
-            letterSpacing: "0.4em",
-            color: "var(--vermilion)",
-            textTransform: "uppercase",
-            marginBottom: 2,
-          }}
+          className="kicker"
+          style={{ textAlign: "center", marginBottom: 10, opacity: filled ? 1 : 0.5 }}
         >
           BY THE HAND OF
         </div>
-
-        {/* The name in display caps — the hero of the preview */}
-        <div
-          className="t-display"
+        <input
+          ref={inputRef}
+          value={name}
+          onChange={onChange}
+          placeholder={placeholder}
+          maxLength={20}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          className="display"
           style={{
             fontSize: 26,
-            letterSpacing: "0.04em",
-            lineHeight: 1.0,
-            color: "var(--ink)",
-            margin: "2px 0 4px",
-            fontWeight: 500,
-            // Avoid awkward orphan when name is short
-            wordBreak: "break-word",
-          }}
-        >
-          {display}
-        </div>
-
-        {/* ENS line */}
-        <div
-          className="t-mono"
-          style={{
-            fontSize: 9,
-            color: "var(--ink-70)",
-            letterSpacing: 0,
+            textAlign: "center",
+            color: filled ? "var(--ink)" : name ? "var(--ink-70)" : "var(--ink-50)",
             marginBottom: 6,
-          }}
-        >
-          {ens}
-        </div>
-
-        {/* Engraved double rule */}
-        <div
-          aria-hidden
-          style={{
-            height: 3,
-            width: 36,
-            margin: "4px auto 6px",
-            borderTop: "0.5px solid var(--gilded)",
-            borderBottom: "0.5px solid var(--gilded)",
+            minHeight: 32,
+            width: "100%",
+            padding: 0,
+            border: "none",
+            borderBottom: "0.5px dashed var(--gilded)",
+            background: "transparent",
+            outline: "none",
+            fontFamily: "var(--font-display)",
+            fontWeight: 500,
+            letterSpacing: "0.02em",
           }}
         />
-
-        {/* Status line */}
         <div
-          className="t-mono"
+          className="mono"
           style={{
-            fontSize: 8,
-            letterSpacing: "0.18em",
-            color: dim
-              ? "var(--ink-50)"
-              : available
-              ? "var(--verdigris)"
-              : "var(--vermilion)",
-            textTransform: "uppercase",
+            fontSize: 11,
+            textAlign: "center",
+            color: "var(--ink-50)",
+            marginTop: 8,
+            marginBottom: 14,
+            wordBreak: "break-all",
           }}
         >
-          {dim ? "AWAITING THE QUILL" : available ? "AVAILABLE TO SEAL" : "ALREADY TAKEN"}
+          {(name || "your-name") + ".pragueconnect.eth"}
         </div>
-
-        {/* CROPS hallmark in the corner — small but present */}
+        <hr className="hr-gilded" />
         <div
-          style={{
-            position: "absolute",
-            bottom: 6,
-            right: 8,
-            opacity: 0.7,
-            lineHeight: 0,
-          }}
+          className="kicker-soft"
+          style={{ textAlign: "center", marginTop: 10, fontSize: 8 }}
         >
-          <CropsSeal size={14} />
+          {filled ? "AVAILABLE TO SEAL" : "AWAITING NAME"}
         </div>
-      </div>
-
-      {/* Caption below */}
-      <div
-        className="t-italic"
-        style={{
-          fontSize: 11,
-          color: "var(--ink-50)",
-          textAlign: "center",
-          marginTop: 8,
-          lineHeight: 1.4,
-        }}
-      >
-        a glimpse of your future seal
       </div>
     </div>
   );
