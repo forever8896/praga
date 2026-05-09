@@ -1,0 +1,109 @@
+/* Praga — Rudolfine Workshop tokens. Ported from /design/tokens.css. */
+:root {
+  --ink: #0F0E0C;
+  --parchment: #F4ECD8;
+  --bone: #E6DCC4;
+  --vermilion: #B23A2F;
+  --vermilion-deep: #8C2A22;
+  --lapis: #1F3A6E;
+  --gilded: #C8A24A;
+  --gilded-soft: #B59140;
+  --verdigris: #3E6B5A;
+
+  --ink-70: rgba(15, 14, 12, 0.70);
+  --ink-50: rgba(15, 14, 12, 0.50);
+  --ink-30: rgba(15, 14, 12, 0.30);
+  --ink-15: rgba(15, 14, 12, 0.15);
+  --ink-08: rgba(15, 14, 12, 0.08);
+
+  /* font families resolved via next/font CSS variables in layout.tsx */
+  --display: var(--font-display), 'Cormorant Garamond', 'Trajan Pro', serif;
+  --body: var(--font-body), 'EB Garamond', 'Garamond', 'Caslon Pro', Georgia, serif;
+  --ceremonial: var(--font-ceremonial), 'UnifrakturCook', 'UnifrakturMaguntia', serif;
+  --mono: var(--font-mono), 'JetBrains Mono', 'iA Writer Mono', ui-monospace, monospace;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--parchment);
+}
+body {
+  font-family: var(--body);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+.parchment-surface {
+  background-color: var(--parchment);
+  background-image:
+    radial-gradient(rgba(176, 138, 78, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(120, 90, 50, 0.04) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+}
+.bone-surface { background-color: var(--bone); }
+.ink-surface {
+  background-color: var(--ink);
+  color: var(--parchment);
+  background-image: radial-gradient(rgba(244, 236, 216, 0.04) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+.t-display {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-feature-settings: 'smcp' on;
+}
+.t-display-tight { letter-spacing: 0.04em; }
+.t-body { font-family: var(--body); font-weight: 400; }
+.t-italic { font-family: var(--body); font-style: italic; font-weight: 400; }
+.t-mono { font-family: var(--mono); font-weight: 400; letter-spacing: -0.01em; }
+.t-cer { font-family: var(--ceremonial); font-weight: 400; }
+
+.hr-gilded { height: 0; border: 0; border-top: 0.5px solid var(--gilded); opacity: 0.7; }
+.hr-double {
+  height: 3px; border: 0;
+  border-top: 0.5px solid var(--gilded);
+  border-bottom: 0.5px solid var(--gilded);
+  opacity: 0.7;
+}
+
+.dropcap::first-letter {
+  font-family: var(--display);
+  font-size: 4.2em;
+  line-height: 0.9;
+  float: left;
+  padding: 0.05em 0.12em 0 0;
+  color: var(--vermilion);
+  font-weight: 600;
+}
+
+@media (max-width: 1439px) { .desktop-only { display: none !important; } }
+@media (min-width: 1440px) { .mobile-only { display: none !important; } }
+
+/* Constrain ultra-wide stretching on desktop variants. */
+.desktop-only.parchment-surface,
+.parchment-surface.desktop-only {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Navbar responsive helpers — desktop links + mobile burger. */
+@media (max-width: 767px) {
+  .navbar-desktop { display: none !important; }
+  .navbar-myens { display: none !important; }
+}
+@media (min-width: 768px) {
+  .navbar-burger { display: none !important; }
+  .navbar-mobile-menu { display: none !important; }
+}
