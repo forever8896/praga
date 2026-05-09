@@ -23,7 +23,7 @@ function OnboardingScreen() {
   const { lang, setLang } = useI18n();
 
   return (
-    <div className="page" style={{ minHeight: "100vh", paddingBottom: 40 }}>
+    <div className="page page-castle" style={{ minHeight: "100vh", paddingBottom: 40 }}>
       <div className="container-tight" style={{ paddingTop: 36, textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
           <Image

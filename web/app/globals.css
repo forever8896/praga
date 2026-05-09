@@ -93,6 +93,41 @@ a { color: inherit; text-decoration: none; }
   font-size: 16px;
 }
 
+/* Castle-curtain backdrop — used on the landing page only.
+ * Five layers, top to bottom:
+ *   1. Tiled golden fleur-de-lis (~12% opacity)
+ *   2. Subtle vertical "fabric folds" (highlight + shadow stripes)
+ *   3. Soft radial vignette (corners drawn into shadow)
+ *   4. Deep vermilion wash (the velvet)
+ *   5. Parchment base, so cartouches/text stay legible
+ * Tunable by --castle-* CSS vars below. */
+.page-castle {
+  background-color: var(--parchment);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96' width='96' height='96'><g fill='none' stroke='%23B79F4E' stroke-width='0.9' stroke-linecap='round' stroke-linejoin='round' opacity='0.55'><path d='M48 22 C 48 32, 48 46, 48 56'/><path d='M48 18 C 45 22, 45 26, 48 28 C 51 26, 51 22, 48 18 Z'/><path d='M48 36 C 38 36, 30 42, 28 52 C 26 58, 32 60, 38 56 C 42 53, 44 46, 48 44'/><path d='M48 36 C 58 36, 66 42, 68 52 C 70 58, 64 60, 58 56 C 54 53, 52 46, 48 44'/><path d='M32 48 C 38 47, 58 47, 64 48'/><path d='M36 56 C 40 60, 56 60, 60 56'/><path d='M40 60 L 56 60'/><path d='M48 56 L 48 64'/></g></svg>"),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      rgba(255, 235, 200, 0.045) 28px,
+      transparent 60px,
+      rgba(20, 6, 4, 0.06) 92px,
+      transparent 120px
+    ),
+    radial-gradient(
+      ellipse at center,
+      transparent 40%,
+      rgba(40, 12, 10, 0.18) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(140, 38, 30, 0.22),
+      rgba(120, 32, 26, 0.28)
+    );
+  background-size: 96px 96px, auto, auto, auto;
+  background-repeat: repeat, repeat, no-repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed;
+}
+
 /* ============== Type primitives ============== */
 
 .kicker {
