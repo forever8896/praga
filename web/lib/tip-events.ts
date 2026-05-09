@@ -1,7 +1,8 @@
-// Server-side helper: read PragueConnectTip.Tipped events from Base Sepolia and
-// resolve sender/recipient ENS labels by checking against pragueconnect.eth subnames.
+// Server-side helper: read PragueConnectTip.Tipped events from the active
+// chain (Base mainnet by default; Base Sepolia for testnet) and resolve
+// sender/recipient ENS labels against pragueconnect.eth subnames.
 import { createPublicClient, http, parseAbiItem, type Log } from "viem";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { env } from "./env";
 import { listSubnames, type NameStoneRecord } from "./resolver";
 
@@ -34,7 +35,11 @@ export async function loadTipReceipts(opts: QueryOpts = {}): Promise<TipReceipt[
   const tipAddress = env.tipAddress;
   if (!tipAddress) return [];
 
-  const client = createPublicClient({ chain: baseSepolia, transport: http(env.baseSepoliaRpcUrl) });
+  const onMainnet = env.defaultChainId === base.id;
+  const client = createPublicClient({
+    chain: onMainnet ? base : baseSepolia,
+    transport: http(onMainnet ? env.baseRpcUrl : env.baseSepoliaRpcUrl),
+  });
 
   // PragueConnectTip was deployed on 2026-05-08. We start from a recent block.
   // For the demo dataset (tens of events) a single getLogs call is fine.
