@@ -308,71 +308,19 @@ function CartoucheCorner({ pos, accent }: { pos: "tl" | "tr" | "bl" | "br"; acce
 }
 
 // ============== Alchemical Sigils (category icons) ==============
-const SIGIL_PATHS: Record<SigilKind, ReactNode> = {
-  forge: (
-    <g stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="20" cy="22" r="6" />
-      <line x1="24.5" y1="17.5" x2="30" y2="12" />
-      <path d="M 27 12 L 30 12 L 30 15" />
-      <rect x="14" y="30" width="12" height="2.5" />
-      <path d="M 12 32.5 L 10 35 M 28 32.5 L 30 35" />
-    </g>
-  ),
-  mercury: (
-    <g stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M 14 8 C 14 12, 17 14, 20 14 C 23 14, 26 12, 26 8" />
-      <circle cx="20" cy="20" r="5" />
-      <line x1="20" y1="25" x2="20" y2="32" />
-      <line x1="16" y1="29" x2="24" y2="29" />
-    </g>
-  ),
-  sulphur: (
-    <g stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M 20 8 L 14 18 L 26 18 Z" />
-      <line x1="20" y1="18" x2="20" y2="26" />
-      <path d="M 16 26 L 24 26 M 17 28 L 23 28" />
-      <path d="M 16 32 C 16 30, 18 30, 18 32 C 18 30, 20 30, 20 32 C 20 30, 22 30, 22 32 C 22 30, 24 30, 24 32" />
-    </g>
-  ),
-  caduceus: (
-    <g stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="20" y1="8" x2="20" y2="32" />
-      <path d="M 20 12 C 16 14, 16 18, 20 20 C 24 22, 24 26, 20 28" />
-      <path d="M 20 12 C 24 14, 24 18, 20 20 C 16 22, 16 26, 20 28" />
-      <path d="M 12 11 C 14 9, 17 9, 19 11" />
-      <path d="M 28 11 C 26 9, 23 9, 21 11" />
-      <circle cx="20" cy="9" r="0.8" fill="currentColor" />
-    </g>
-  ),
-  saturn: (
-    <g stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M 16 10 L 24 10" />
-      <line x1="20" y1="10" x2="20" y2="22" />
-      <path d="M 20 22 C 17 22, 15 24, 15 27 C 15 30, 17 32, 19 31 C 18 28, 20 26, 22 28" />
-      <ellipse cx="28" cy="28" rx="2.5" ry="3" />
-      <circle cx="27" cy="27" r="0.5" fill="currentColor" />
-      <circle cx="29" cy="27" r="0.5" fill="currentColor" />
-      <path d="M 26.5 25.5 L 27 27 M 29.5 25.5 L 29 27" />
-    </g>
-  ),
-  venus: (
-    <g stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="20" cy="16" r="6" />
-      <line x1="20" y1="22" x2="20" y2="32" />
-      <line x1="16" y1="28" x2="24" y2="28" />
-      <path d="M 20 14 C 18 14, 18 17, 20 17 C 22 17, 22 14, 20 14 Z" />
-      <path d="M 17 16 C 18 14, 22 14, 23 16" opacity="0.6" />
-    </g>
-  ),
-  alembic: (
-    <g stroke="currentColor" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M 17 10 L 23 10 L 23 14 L 27 22 C 28 24, 27 26, 24 26 L 16 26 C 13 26, 12 24, 13 22 L 17 14 Z" />
-      <line x1="15" y1="10" x2="25" y2="10" />
-      <path d="M 23 14 L 32 14 L 32 22 L 30 22" />
-      <path d="M 18 22 C 20 21, 22 21, 24 22" />
-    </g>
-  ),
-};
+// Source: game-icons.net (Lorc, Delapouite — CC BY 3.0). One file per kind
+// in /public/icons/, fill="currentColor" so the page's --ink token flows
+// through. Mask-image lets us recolor with backgroundColor without losing
+// SVG-cache benefits.
+//
+// Mapping:
+//   forge    → Lorc/anvil
+//   mercury  → Lorc/chemical-bolt
+//   sulphur  → Delapouite/pyre
+//   caduceus → Delapouite/caduceus
+//   saturn   → Delapouite/planet-conquest
+//   venus    → Delapouite/female (♀)
+//   alembic  → Lorc/round-bottom-flask
 
 export function AlchemicalSigil({
   kind = "forge",
@@ -389,14 +337,49 @@ export function AlchemicalSigil({
   frameColor?: string;
   style?: CSSProperties;
 }) {
+  const inset = frame ? Math.max(4, Math.round(size * 0.16)) : 0;
+  const iconUrl = `url(/icons/${kind}.svg)`;
   return (
-    <span style={{ display: "inline-flex", width: size, height: size, ...style }}>
-      <svg width={size} height={size} viewBox="0 0 40 40" style={{ color, display: "block" }}>
-        {frame && (
-          <circle cx="20" cy="20" r="18.5" fill="none" stroke={frameColor} strokeWidth="0.5" opacity="0.85" />
-        )}
-        {SIGIL_PATHS[kind] || SIGIL_PATHS.forge}
-      </svg>
+    <span
+      style={{
+        display: "inline-flex",
+        position: "relative",
+        width: size,
+        height: size,
+        ...style,
+      }}
+    >
+      {frame && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            border: `0.5px solid ${frameColor}`,
+            opacity: 0.85,
+          }}
+        />
+      )}
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: inset,
+          left: inset,
+          right: inset,
+          bottom: inset,
+          backgroundColor: color,
+          maskImage: iconUrl,
+          maskSize: "contain",
+          maskRepeat: "no-repeat",
+          maskPosition: "center",
+          WebkitMaskImage: iconUrl,
+          WebkitMaskSize: "contain",
+          WebkitMaskRepeat: "no-repeat",
+          WebkitMaskPosition: "center",
+        }}
+      />
     </span>
   );
 }
