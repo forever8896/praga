@@ -1,8 +1,19 @@
 // POST /api/claim-name — issues a `<name>.pragueconnect.eth` subname through
 // PragueConnect's own resolver store (no third-party SaaS in the path).
+//
+// Hard invite gate: when INVITE_REQUIRED is true, claim requires a valid
+// invite code. Codes are consumed atomically with the claim. The inviter
+// (code's owner) becomes the claimant's `sealed-by` chain — that drives the
+// 5% finder's-mark on tipWithReferral.
 import { NextResponse } from "next/server";
 import { getSubname, setSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
+import {
+  consumeInvite,
+  validateInvite,
+  mintCodesForUser,
+  INVITE_REQUIRED,
+} from "@/lib/invite-codes";
 
 export const runtime = "nodejs";
 
@@ -10,6 +21,7 @@ interface Body {
   name?: string;
   address?: string;
   invitedBy?: string | null;
+  inviteCode?: string | null;
 }
 
 export async function POST(req: Request) {
@@ -30,27 +42,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid-address" }, { status: 400 });
   }
 
-  // Inviter is best-effort: validate shape, confirm the inviter actually has a
-  // subname under our parent, and only then record it as a sealed-by trail.
-  // A bad/missing inviter must NOT block the claim. We also surface the
-  // inviter's display so the SealedBeat can render "Send <Name> a thank-you".
-  let sealedBy: string | null = null;
-  let inviterDisplay: string | null = null;
-  if (body.invitedBy && typeof body.invitedBy === "string") {
-    const inviter = body.invitedBy.toLowerCase().trim();
-    if (/^[a-z0-9-]{1,32}$/.test(inviter) && inviter !== name) {
-      const inviterRecord = await getSubname(env.namestoneDomain, inviter).catch(() => null);
-      if (inviterRecord) {
-        sealedBy = `${inviter}.${env.namestoneDomain}`;
-        inviterDisplay = inviterRecord.text_records?.name ?? inviter.charAt(0).toUpperCase() + inviter.slice(1);
-      }
+  const inviteCode = (body.inviteCode ?? "").toString().trim().toUpperCase();
+
+  // Hard invite gate: validate the code BEFORE writing anything.
+  if (INVITE_REQUIRED) {
+    if (!inviteCode) {
+      return NextResponse.json({ error: "invite-required" }, { status: 403 });
+    }
+    const valid = await validateInvite(inviteCode);
+    if (!valid) {
+      return NextResponse.json({ error: "invite-invalid" }, { status: 403 });
     }
   }
 
-  // Treat NameStone's existence-check as the uniqueness check.
+  // Resolve the inviter chain. If the body provides `invitedBy` we use it;
+  // otherwise we derive it from the invite code's owner. The code's owner
+  // wins on conflict — codes are the source of truth for the seal-by chain.
+  let sealedBy: string | null = null;
+  let inviterDisplay: string | null = null;
+  let inviterFromCode: string | null = null;
+
+  if (inviteCode) {
+    const code = await validateInvite(inviteCode); // re-fetch
+    if (code?.owner) inviterFromCode = code.owner;
+  }
+
+  const inviterCandidate = inviterFromCode
+    ? inviterFromCode.replace(/\.pragueconnect\.eth$/i, "")
+    : (body.invitedBy ?? "").toString().toLowerCase().trim();
+
+  if (inviterCandidate && /^[a-z0-9-]{1,32}$/.test(inviterCandidate) && inviterCandidate !== name) {
+    const inviterRecord = await getSubname(env.namestoneDomain, inviterCandidate).catch(() => null);
+    if (inviterRecord) {
+      sealedBy = `${inviterCandidate}.${env.namestoneDomain}`;
+      inviterDisplay =
+        inviterRecord.text_records?.name ??
+        inviterCandidate.charAt(0).toUpperCase() + inviterCandidate.slice(1);
+    }
+  }
+
+  // Uniqueness check — the resolver store is the source of truth.
   const existing = await getSubname(env.namestoneDomain, name);
   if (existing) {
-    // If this address already owns the name, that's fine (idempotent re-claim).
     if (existing.address.toLowerCase() === address.toLowerCase()) {
       return NextResponse.json({ ok: true, idempotent: true });
     }
@@ -70,13 +103,27 @@ export async function POST(req: Request) {
       address: address as `0x${string}`,
       text_records,
     });
+
+    // Consume the invite code AFTER the subname write succeeds. If we crash
+    // between these two, the user's claim succeeded and the code is still
+    // burnable on retry — preferable to the alternative (consumed code, no
+    // subname).
+    if (inviteCode) {
+      await consumeInvite(inviteCode, `${name}.${env.namestoneDomain}`).catch(() => {});
+    }
+
+    // Mint this new user's own invite codes so they can pass the seal forward.
+    const ownCodes = await mintCodesForUser(`${name}.${env.namestoneDomain}`).catch(() => []);
+
     return NextResponse.json({
       ok: true,
       ens: `${name}.${env.namestoneDomain}`,
       sealedBy,
-      inviter: sealedBy && inviterDisplay
-        ? { ens: sealedBy, display: inviterDisplay }
-        : null,
+      inviter:
+        sealedBy && inviterDisplay
+          ? { ens: sealedBy, display: inviterDisplay }
+          : null,
+      inviteCodes: ownCodes,
     });
   } catch (e) {
     return NextResponse.json(

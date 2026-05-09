@@ -17,7 +17,74 @@
 // in the cinematic press-and-hold flow without us having to reproduce it here.
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useState } from "react";
 import { CropsSeal, FleurDeLis, WaxSeal } from "./ornaments";
+
+function InviteCodeBlock({
+  codes,
+  kicker,
+  body,
+  copyLabel,
+  copiedLabel,
+}: {
+  codes: string[];
+  kicker: string;
+  body: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  return (
+    <div style={{ marginTop: 32, padding: "20px 18px", border: "0.5px solid var(--gilded)", background: "var(--bone)" }}>
+      <div className="t-display" style={{ fontSize: 10, letterSpacing: "0.4em", color: "var(--vermilion)", textAlign: "center", marginBottom: 8 }}>
+        {kicker}
+      </div>
+      <p className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", textAlign: "center", marginBottom: 16, lineHeight: 1.55 }}>
+        {body}
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {codes.map((code) => {
+          const url = `${origin}/i/${code}`;
+          const isCopied = copiedCode === code;
+          return (
+            <div key={code} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", border: "0.5px solid var(--gilded)", background: "var(--parchment)" }}>
+              <span className="t-mono" style={{ flex: 1, fontSize: 12, color: "var(--ink)", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {url}
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    setCopiedCode(code);
+                    setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 1800);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+                className="t-display"
+                style={{
+                  flex: "0 0 auto",
+                  fontSize: 9,
+                  letterSpacing: "0.25em",
+                  color: isCopied ? "var(--verdigris)" : "var(--vermilion)",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px 6px",
+                }}
+              >
+                {isCopied ? copiedLabel : copyLabel}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 interface InviterContext {
   ens: string;
@@ -28,11 +95,13 @@ export function SealedBeat({
   label,
   display,
   inviter,
+  inviteCodes = [],
   lang = "en",
 }: {
   label: string;
   display: string;
   inviter: InviterContext | null;
+  inviteCodes?: string[];
   lang?: "en" | "cs";
 }) {
   const router = useRouter();
@@ -47,6 +116,10 @@ export function SealedBeat({
         postOffer: "Vyvěsit první nabídku →",
         viewSeal: "Zobrazit svůj pergamen →",
         privacy: "soukromé · zapečetěné · vaše",
+        invitesKicker: "VAŠE PEČETĚ K PŘEDÁNÍ",
+        invitesBody: "Tři neotevřené pečetě. Sdílejte je s lidmi, které do cechu chcete uvést — z jejich prvního spropitného vám připadne 5 % jako nálezné.",
+        copy: "kopírovat",
+        copied: "zkopírováno",
       }
     : {
         kicker: "YOUR SEAL IS SEALED",
@@ -55,6 +128,10 @@ export function SealedBeat({
         postOffer: "Post your first offer →",
         viewSeal: "View your seal →",
         privacy: "private · sealed · yours",
+        invitesKicker: "YOUR SEALS TO PASS ON",
+        invitesBody: "Three unopened seals. Share them with anyone you'd vouch for — when they tip, 5% returns to you as a finder's mark.",
+        copy: "copy",
+        copied: "copied",
       };
 
   const inviterFirst = inviter?.display.split(" ")[0] ?? null;
@@ -98,6 +175,10 @@ export function SealedBeat({
             {copy.viewSeal}
           </Link>
         </div>
+
+        {inviteCodes.length > 0 && (
+          <InviteCodeBlock codes={inviteCodes} kicker={copy.invitesKicker} body={copy.invitesBody} copyLabel={copy.copy} copiedLabel={copy.copied} />
+        )}
 
         <div style={{ marginTop: 28, display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}>
           <CropsSeal size={20} />

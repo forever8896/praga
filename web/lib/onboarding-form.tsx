@@ -9,6 +9,13 @@ import { useRouter } from "next/navigation";
 import { FleurDeLis } from "./ornaments";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { readInviter, clearInviter } from "./inheritance-tab";
+
+/** Read the `pc_invite` cookie set by /i/<code>. Returns null if absent. */
+function readInviteCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(/(?:^|;\s*)pc_invite=([A-Z2-9]{8})/);
+  return m ? m[1] : null;
+}
 import { useT, useI18n } from "./i18n";
 import {
   InscriptionStage,
@@ -35,6 +42,10 @@ interface ClaimedInviter {
   display: string;
 }
 
+interface ClaimedInviteCodes {
+  codes: string[];
+}
+
 export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
   const { login, authenticated, user, ready, logout } = usePrivy();
   const { signMessage } = useSignMessage();
@@ -46,6 +57,7 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPromise, setShowPromise] = useState(false);
   const [claimedInviter, setClaimedInviter] = useState<ClaimedInviter | null>(null);
+  const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
   const [showSealedBeat, setShowSealedBeat] = useState(false);
   const router = useRouter();
   const checkAbort = useRef<AbortController | null>(null);
@@ -111,16 +123,27 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
     setClaimState("claiming");
     inscriptionStartRef.current = Date.now();
     const invitedBy = readInviter();
+    const inviteCode = readInviteCookie();
     try {
       const res = await fetch("/api/claim-name", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address: claimAddress, invitedBy }),
+        body: JSON.stringify({ name, address: claimAddress, invitedBy, inviteCode }),
       });
       const data = await res.json();
       if (!res.ok) {
         if (data.error === "name-taken") {
           setClaimState("taken");
+          return;
+        }
+        if (data.error === "invite-required") {
+          setClaimState("error");
+          setErrorMsg("You need an invite code. Ask a member of the guild for one.");
+          return;
+        }
+        if (data.error === "invite-invalid") {
+          setClaimState("error");
+          setErrorMsg("This invite has already been opened. Ask for a fresh one.");
           return;
         }
         setClaimState("error");
@@ -133,6 +156,9 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
           ens: String(data.inviter.ens ?? ""),
           display: String(data.inviter.display ?? ""),
         });
+      }
+      if (Array.isArray(data.inviteCodes)) {
+        setClaimedCodes(data.inviteCodes.filter((c: unknown): c is string => typeof c === "string"));
       }
       // Inviter has been recorded server-side; clear from localStorage so the
       // signal doesn't persist across future claims on this device.
@@ -399,6 +425,7 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
           label={name}
           display={name.charAt(0).toUpperCase() + name.slice(1)}
           inviter={claimedInviter}
+          inviteCodes={claimedCodes}
           lang={lang}
         />
       )}
