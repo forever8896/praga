@@ -15,6 +15,9 @@ import {
   inscriptionRemaining,
   type InscriptionState,
 } from "./inscription-stage";
+import { SealedBeat } from "./sealed-beat";
+import { PromiseCard } from "./promise-card";
+import { LivePreviewParchment } from "./live-preview-parchment";
 
 type ClaimState =
   | "idle"
@@ -27,6 +30,11 @@ type ClaimState =
   | "taken"
   | "error";
 
+interface ClaimedInviter {
+  ens: string;
+  display: string;
+}
+
 export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
   const { login, authenticated, user, ready, logout } = usePrivy();
   const { signMessage } = useSignMessage();
@@ -36,6 +44,9 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
   const [name, setName] = useState("");
   const [claimState, setClaimState] = useState<ClaimState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showPromise, setShowPromise] = useState(false);
+  const [claimedInviter, setClaimedInviter] = useState<ClaimedInviter | null>(null);
+  const [showSealedBeat, setShowSealedBeat] = useState(false);
   const router = useRouter();
   const checkAbort = useRef<AbortController | null>(null);
   const inscriptionStartRef = useRef<number | null>(null);
@@ -78,7 +89,16 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
   const onSeal = async () => {
     setErrorMsg(null);
     if (!name) return;
+    // Beat 3 — surface the promise card before Privy's modal opens. Once the
+    // user presses CONTINUE on the card we'll re-enter onSeal with auth in
+    // flight; the second entry skips the card.
     if (!authenticated) {
+      if (!showPromise) {
+        setShowPromise(true);
+        return;
+      }
+      // user already saw the card — fall through to login
+      setShowPromise(false);
       login();
       return;
     }
@@ -108,6 +128,12 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         return;
       }
       setClaimState("claimed");
+      if (data.inviter && typeof data.inviter === "object") {
+        setClaimedInviter({
+          ens: String(data.inviter.ens ?? ""),
+          display: String(data.inviter.display ?? ""),
+        });
+      }
       // Inviter has been recorded server-side; clear from localStorage so the
       // signal doesn't persist across future claims on this device.
       clearInviter();
@@ -144,9 +170,10 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         setClaimState("fully-sealed");
       }
       // Hold on the inscription animation until it has dwelled long enough,
-      // so the ceremony reads no matter how fast the API resolved.
+      // then transition into Beat 5 (SealedBeat). The user picks their own
+      // next move from the celebratory screen — no silent redirect.
       const wait = Math.max(600, inscriptionRemaining(inscriptionStartRef.current));
-      setTimeout(() => router.push(`/${name}.pragueconnect.eth`), wait);
+      setTimeout(() => setShowSealedBeat(true), wait);
     } catch (e) {
       setClaimState("error");
       setErrorMsg(e instanceof Error ? e.message : "The line to Prague was busy.");
@@ -231,6 +258,20 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
           ? `✓ ${name}.pragueconnect.eth ${t("onboard.available")}`
           : ""}
       </div>
+
+      {/* Beat 2 — live-preview parchment. Hidden once the user is mid-claim so
+          the InscriptionStage owns the stage. */}
+      {claimState !== "claiming" &&
+        claimState !== "claimed" &&
+        claimState !== "sealing-stealth" &&
+        claimState !== "fully-sealed" && (
+          <div style={{ marginBottom: 24 }}>
+            <LivePreviewParchment
+              name={name}
+              available={claimState === "available"}
+            />
+          </div>
+        )}
 
       <button
         type="button"
@@ -332,11 +373,32 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         claimState === "claimed" ||
         claimState === "sealing-stealth" ||
         claimState === "fully-sealed" ||
-        claimState === "error") && (
-        <InscriptionStage
-          name={name}
-          state={mapToInscription(claimState)}
-          errorMsg={errorMsg}
+        claimState === "error") &&
+        !showSealedBeat && (
+          <InscriptionStage
+            name={name}
+            state={mapToInscription(claimState)}
+            errorMsg={errorMsg}
+            lang={lang}
+          />
+        )}
+
+      {showPromise && (
+        <PromiseCard
+          onContinue={() => {
+            setShowPromise(false);
+            login();
+          }}
+          onCancel={() => setShowPromise(false)}
+          lang={lang}
+        />
+      )}
+
+      {showSealedBeat && claimState === "fully-sealed" && (
+        <SealedBeat
+          label={name}
+          display={name.charAt(0).toUpperCase() + name.slice(1)}
+          inviter={claimedInviter}
           lang={lang}
         />
       )}

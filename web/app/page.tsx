@@ -91,7 +91,7 @@ function MobileOnboarding() {
           width={300}
           height={200}
           priority
-          style={{ height: 92, width: "auto", display: "block", marginBottom: 4 }}
+          style={{ height: 64, width: "auto", display: "block", marginBottom: 4 }}
         />
         <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)" }}>est. anno mmxxvi · Praha</div>
         <div className="hr-double" style={{ width: 48, marginTop: 16, marginBottom: 28 }} />

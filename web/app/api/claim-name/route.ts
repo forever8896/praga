@@ -32,14 +32,17 @@ export async function POST(req: Request) {
 
   // Inviter is best-effort: validate shape, confirm the inviter actually has a
   // subname under our parent, and only then record it as a sealed-by trail.
-  // A bad/missing inviter must NOT block the claim.
+  // A bad/missing inviter must NOT block the claim. We also surface the
+  // inviter's display so the SealedBeat can render "Send <Name> a thank-you".
   let sealedBy: string | null = null;
+  let inviterDisplay: string | null = null;
   if (body.invitedBy && typeof body.invitedBy === "string") {
     const inviter = body.invitedBy.toLowerCase().trim();
     if (/^[a-z0-9-]{1,32}$/.test(inviter) && inviter !== name) {
       const inviterRecord = await getSubname(env.namestoneDomain, inviter).catch(() => null);
       if (inviterRecord) {
         sealedBy = `${inviter}.${env.namestoneDomain}`;
+        inviterDisplay = inviterRecord.text_records?.name ?? inviter.charAt(0).toUpperCase() + inviter.slice(1);
       }
     }
   }
@@ -67,7 +70,14 @@ export async function POST(req: Request) {
       address: address as `0x${string}`,
       text_records,
     });
-    return NextResponse.json({ ok: true, ens: `${name}.pragueconnect.eth`, sealedBy });
+    return NextResponse.json({
+      ok: true,
+      ens: `${name}.${env.namestoneDomain}`,
+      sealedBy,
+      inviter: sealedBy && inviterDisplay
+        ? { ens: sealedBy, display: inviterDisplay }
+        : null,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "resolver-failed" },
