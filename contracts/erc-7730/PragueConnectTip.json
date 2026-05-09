@@ -4,7 +4,7 @@
     "$id": "PragueConnectTip — sealed gift",
     "contract": {
       "deployments": [
-        { "chainId": 84532, "address": "0x44b09471Ece57443FE5b9d350eF3B4f90244AB1b" }
+        { "chainId": 84532, "address": "0x42F035e3A94A232e3240fF91371d51e2ee7bdd91" }
       ],
       "abi": [
         {

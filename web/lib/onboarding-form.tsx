@@ -9,7 +9,12 @@ import { useRouter } from "next/navigation";
 import { FleurDeLis } from "./ornaments";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { readInviter, clearInviter } from "./inheritance-tab";
-import { useT } from "./i18n";
+import { useT, useI18n } from "./i18n";
+import {
+  InscriptionStage,
+  inscriptionRemaining,
+  type InscriptionState,
+} from "./inscription-stage";
 
 type ClaimState =
   | "idle"
@@ -27,11 +32,13 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
   const { signMessage } = useSignMessage();
   const { identityToken } = useIdentityToken();
   const t = useT();
+  const { lang } = useI18n();
   const [name, setName] = useState("");
   const [claimState, setClaimState] = useState<ClaimState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
   const checkAbort = useRef<AbortController | null>(null);
+  const inscriptionStartRef = useRef<number | null>(null);
 
   const isMobile = size === "mobile";
   const titleSize = isMobile ? 36 : 42;
@@ -82,6 +89,7 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
     }
 
     setClaimState("claiming");
+    inscriptionStartRef.current = Date.now();
     const invitedBy = readInviter();
     try {
       const res = await fetch("/api/claim-name", {
@@ -135,8 +143,10 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         // user cancelled the stealth signature — still ship them to their profile
         setClaimState("fully-sealed");
       }
-      // Brief pause for the seal-press feel, then visit the new personal site.
-      setTimeout(() => router.push(`/${name}.pragueconnect.eth`), 600);
+      // Hold on the inscription animation until it has dwelled long enough,
+      // so the ceremony reads no matter how fast the API resolved.
+      const wait = Math.max(600, inscriptionRemaining(inscriptionStartRef.current));
+      setTimeout(() => router.push(`/${name}.pragueconnect.eth`), wait);
     } catch (e) {
       setClaimState("error");
       setErrorMsg(e instanceof Error ? e.message : "The line to Prague was busy.");
@@ -317,6 +327,26 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
           sign out
         </button>
       )}
+
+      {(claimState === "claiming" ||
+        claimState === "claimed" ||
+        claimState === "sealing-stealth" ||
+        claimState === "fully-sealed" ||
+        claimState === "error") && (
+        <InscriptionStage
+          name={name}
+          state={mapToInscription(claimState)}
+          errorMsg={errorMsg}
+          lang={lang}
+        />
+      )}
     </div>
   );
+}
+
+function mapToInscription(state: ClaimState): InscriptionState {
+  if (state === "claiming" || state === "claimed") return "carving";
+  if (state === "sealing-stealth") return "sealing";
+  if (state === "fully-sealed") return "done";
+  return "error";
 }
