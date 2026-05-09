@@ -40,6 +40,7 @@ pnpm-debug.log*
 *.png
 !design/**/*.png
 !CLAUDE_DESIGN_PROMPT.png
+!web/public/**/*.png
 
 # playwright artefacts
 .playwright-mcp/
