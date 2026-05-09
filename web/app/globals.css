@@ -102,45 +102,84 @@ a { color: inherit; text-decoration: none; }
  *   5. Parchment base, so cartouches/text stay legible
  * Tunable by --castle-* CSS vars below. */
 .page-castle {
+  position: relative;
   background-color: #4a130d;
   background-image:
-    /* the gold fleur damask, softened in the SVG itself */
+    /* 1. fabric noise — tiny grain so the velvet isn't plastic */
+    url("/velvet-noise.svg"),
+    /* 2. golden fleur damask, embroidered into the cloth */
     url("/fleur-tile.svg"),
-    /* big draped folds — wide vertical swells of light/shadow that
-     * give the curtain real depth, not striped wallpaper */
-    linear-gradient(
+    /* 3. PLEATS — repeating vertical bands simulating curved fabric:
+     *      | shadow ↘ ridge ↗ shadow | shadow ↘ ridge ↗ shadow | ...
+     *    Each 110px-wide pleat has a deep shadow at its boundary and
+     *    a bright ridge at its center. Hard stops on the valleys give
+     *    the crisp 3-D edge real curtains have. */
+    repeating-linear-gradient(
       90deg,
-      rgba(0, 0, 0, 0.45) 0%,
-      rgba(0, 0, 0, 0.0) 8%,
-      rgba(255, 220, 180, 0.06) 18%,
-      rgba(0, 0, 0, 0.18) 30%,
-      rgba(255, 220, 180, 0.05) 45%,
-      rgba(0, 0, 0, 0.22) 58%,
-      rgba(255, 220, 180, 0.05) 72%,
-      rgba(0, 0, 0, 0.16) 84%,
-      rgba(0, 0, 0, 0.0) 92%,
-      rgba(0, 0, 0, 0.45) 100%
+      rgba(0, 0, 0, 0.42) 0px,
+      rgba(0, 0, 0, 0.32) 4px,
+      rgba(0, 0, 0, 0.10) 22px,
+      rgba(255, 220, 180, 0.04) 42px,
+      rgba(255, 230, 190, 0.10) 55px,
+      rgba(255, 220, 180, 0.04) 68px,
+      rgba(0, 0, 0, 0.10) 88px,
+      rgba(0, 0, 0, 0.32) 106px,
+      rgba(0, 0, 0, 0.42) 110px
     ),
-    /* corner-to-corner darkening for the candlelit-room feel */
+    /* 4. global wash — settles the damask into the velvet base */
+    linear-gradient(
+      180deg,
+      rgba(60, 14, 10, 0.35),
+      rgba(35, 8, 6, 0.55)
+    ),
+    /* 5. candlelit vignette — corners drawn into shadow */
     radial-gradient(
       ellipse at center,
       rgba(20, 6, 4, 0) 35%,
-      rgba(20, 6, 4, 0.55) 100%
+      rgba(10, 3, 2, 0.65) 100%
     );
-  background-size: 180px 220px, auto, auto;
-  background-repeat: repeat, no-repeat, no-repeat;
-  background-attachment: fixed, fixed, fixed;
+  background-size: 240px 240px, 180px 220px, 110px auto, auto, auto;
+  background-repeat: repeat, repeat, repeat, no-repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
+  background-blend-mode: overlay, normal, normal, normal, normal;
 }
 
-/* Hero copy on the velvet needs a soft shadow so the gold fleurs behind
- * it don't compete with the title. Cartouches handle their own contrast. */
-.page-castle > .container-tight > h1,
-.page-castle h1.display {
-  text-shadow: 0 2px 14px rgba(20, 6, 4, 0.7);
+/* Hero scroll — a soft dark vertical sash unfurled behind the headline so
+ * it reads as a banner draped on the curtain, not text floating in chaos.
+ * Sits behind .container-tight via ::before, doesn't capture pointer events. */
+.page-castle > .container-tight {
+  position: relative;
 }
-.page-castle > .container-tight > p,
+.page-castle > .container-tight::before {
+  content: "";
+  position: absolute;
+  inset: 0 -8% 0 -8%;
+  background: linear-gradient(
+    180deg,
+    transparent 0,
+    rgba(15, 4, 3, 0.0) 4%,
+    rgba(15, 4, 3, 0.55) 14%,
+    rgba(15, 4, 3, 0.55) 64%,
+    rgba(15, 4, 3, 0.0) 78%,
+    transparent 100%
+  );
+  filter: blur(28px);
+  pointer-events: none;
+  z-index: 0;
+}
+.page-castle > .container-tight > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hero copy on the velvet — keep the soft shadow so even when the sash
+ * isn't there (mid-page text) the gold fleurs behind don't compete. */
+.page-castle h1.display {
+  text-shadow: 0 2px 14px rgba(10, 3, 2, 0.85), 0 0 30px rgba(10, 3, 2, 0.55);
+}
+.page-castle .container-tight > p,
 .page-castle .container-tight > .italic {
-  text-shadow: 0 1px 6px rgba(20, 6, 4, 0.55);
+  text-shadow: 0 1px 8px rgba(10, 3, 2, 0.7);
 }
 
 /* Inside the castle, hero text sits directly on the velvet — invert to a
