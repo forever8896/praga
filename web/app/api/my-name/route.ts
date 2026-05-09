@@ -10,8 +10,11 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   const session = await verifySession(req);
-  if (!session?.address) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized", reason: "token-rejected" }, { status: 401 });
+  }
+  if (!session.address) {
+    return NextResponse.json({ error: "unauthorized", reason: "no-eth-wallet", userId: session.userId }, { status: 401 });
   }
 
   try {

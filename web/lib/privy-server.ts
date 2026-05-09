@@ -1,12 +1,11 @@
-// Server-side Privy auth. Verifies the identity token a logged-in client
-// sends with authenticated API calls (the one returned by useIdentityToken on
-// the React side). Returns the wallet address bound to the token.
-//
-// IMPORTANT: privy-io/server-auth has two distinct verifiers in v3 —
-//   verifyAuthToken(token)        : for ACCESS tokens (auth header by default)
-//   getUserFromIdToken(idToken)   : for IDENTITY tokens (the cookie / hook value)
-// Our React side uses useIdentityToken, so we must use getUserFromIdToken.
-// Mixing them up returns 401 even for valid sessions.
+// Server-side Privy auth. Verifies the JWT a logged-in client sends in the
+// Authorization header. Privy v3 issues two distinct JWTs:
+//   - access token  → verified via verifyAuthToken(t) → returns claims (userId)
+//   - identity token → verified via getUserFromIdToken(t) → returns User
+// The React side may give us either depending on which hook was used
+// (useIdentityToken / useAccessToken / getAccessToken). To avoid lock-in to a
+// single hook choice, we accept both: try identity-token first (richer payload,
+// no extra round-trip), fall back to access-token verification + getUserById.
 import { PrivyClient, type User } from "@privy-io/server-auth";
 
 const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
@@ -34,7 +33,6 @@ function pickEthereumWallet(user: User): `0x${string}` | null {
       "address" in account &&
       typeof account.address === "string" &&
       /^0x[a-fA-F0-9]{40}$/.test(account.address) &&
-      // chainType may be "ethereum" or "solana" — we only want ETH addresses.
       ((account as { chainType?: string }).chainType ?? "ethereum") === "ethereum"
     ) {
       return account.address.toLowerCase() as `0x${string}`;
@@ -43,7 +41,9 @@ function pickEthereumWallet(user: User): `0x${string}` | null {
   return null;
 }
 
-/** Verify an Authorization: Bearer <identityToken> header. Returns null if missing/invalid. */
+/** Verify an Authorization: Bearer <token> header. Accepts either Privy
+ *  identity tokens (preferred) or access tokens (fallback). Returns null if
+ *  the token is missing or fails both verifiers. */
 export async function verifySession(req: Request): Promise<VerifiedSession | null> {
   const auth = req.headers.get("authorization") ?? req.headers.get("Authorization");
   if (!auth) return null;
@@ -51,15 +51,22 @@ export async function verifySession(req: Request): Promise<VerifiedSession | nul
   if (!m) return null;
   const token = m[1];
 
-  let user: User;
+  const c = getClient();
+
+  // Path 1 — identity token (the one returned by useIdentityToken).
   try {
-    user = await getClient().getUserFromIdToken(token);
+    const user = await c.getUserFromIdToken(token);
+    return { userId: user.id, address: pickEthereumWallet(user) };
+  } catch {
+    /* fall through to access-token path */
+  }
+
+  // Path 2 — access token (the one returned by getAccessToken / useAccessToken).
+  try {
+    const claims = await c.verifyAuthToken(token);
+    const user = await c.getUserById(claims.userId);
+    return { userId: claims.userId, address: pickEthereumWallet(user) };
   } catch {
     return null;
   }
-
-  return {
-    userId: user.id,
-    address: pickEthereumWallet(user),
-  };
 }
