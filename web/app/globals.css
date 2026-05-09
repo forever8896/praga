@@ -102,41 +102,24 @@ a { color: inherit; text-decoration: none; }
  *   5. Parchment base, so cartouches/text stay legible
  * Tunable by --castle-* CSS vars below. */
 .page-castle {
-  background-color: #5b1a14;
+  background-color: #4a130d;
   background-image:
     url("/fleur-tile.svg"),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 220, 170, 0.06) 0,
-      rgba(255, 220, 170, 0.06) 2px,
-      transparent 2px,
-      transparent 60px,
-      rgba(0, 0, 0, 0.15) 60px,
-      rgba(0, 0, 0, 0.15) 62px,
-      transparent 62px,
-      transparent 120px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 240, 200, 0.05),
-      rgba(255, 240, 200, 0.05) 30px,
-      rgba(0, 0, 0, 0.08) 60px,
-      rgba(0, 0, 0, 0.08) 90px,
-      rgba(255, 240, 200, 0.05) 120px
+      rgba(255, 230, 190, 0.04) 0,
+      transparent 80px,
+      rgba(0, 0, 0, 0.18) 160px,
+      transparent 240px
     ),
     radial-gradient(
       ellipse at center,
-      rgba(178, 58, 47, 0.0) 30%,
-      rgba(20, 6, 4, 0.55) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(178, 58, 47, 0.55),
-      rgba(120, 28, 22, 0.7)
+      rgba(20, 6, 4, 0) 30%,
+      rgba(20, 6, 4, 0.65) 100%
     );
-  background-size: 160px 190px, auto, auto, auto, auto;
-  background-repeat: repeat, repeat, repeat, no-repeat, no-repeat;
-  background-attachment: fixed, fixed, fixed, fixed, fixed;
+  background-size: 220px 250px, auto, auto;
+  background-repeat: repeat, repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed;
 }
 
 /* Inside the castle, hero text sits directly on the velvet — invert to a
