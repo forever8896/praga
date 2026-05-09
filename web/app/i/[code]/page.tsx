@@ -1,9 +1,9 @@
-// /i/<code> — invite-link landing page. Validates the code server-side, sets
-// a cookie, and redirects to the onboarding home. The cookie is read by the
-// client when the user clicks SEAL — the code is then forwarded to
-// /api/claim-name and consumed atomically with the subname write.
+// /i/<code> — invite-link landing. Validates the code server-side, then
+// hands the code to the home page via ?inv=<code>. The OnboardingForm picks
+// it up on mount, writes the pc_invite cookie client-side, and clears the
+// query — server-component code paths can't write cookies in Next 15+, so
+// the cookie has to land on the client.
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { validateInvite } from "@/lib/invite-codes";
 
 export const dynamic = "force-dynamic";
@@ -17,17 +17,8 @@ export default async function InviteLanding({
   const code = String(raw).toUpperCase().trim();
   const valid = await validateInvite(code);
 
-  const c = await cookies();
   if (valid) {
-    // 24h cookie — gives the user time to come back and claim. Cookie is
-    // HttpOnly:false so the onboarding form can read it client-side.
-    c.set("pc_invite", code, {
-      maxAge: 60 * 60 * 24,
-      sameSite: "lax",
-      secure: true,
-      path: "/",
-    });
-    redirect("/?invited=1");
+    redirect(`/?inv=${encodeURIComponent(code)}`);
   }
 
   // Code invalid or already used — show a parchment 404 (not a redirect, so

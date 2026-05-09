@@ -11,11 +11,20 @@ import { useRouter } from "next/navigation";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { readInviter, clearInviter } from "./inheritance-tab";
 
-/** Read the `pc_invite` cookie set by /i/<code>. Returns null if absent. */
+/** Read the `pc_invite` cookie. Returns null if absent. */
 function readInviteCookie(): string | null {
   if (typeof document === "undefined") return null;
   const m = document.cookie.match(/(?:^|;\s*)pc_invite=([A-Z2-9]{8})/);
   return m ? m[1] : null;
+}
+
+/** Write the pc_invite cookie client-side (server components can't set
+ *  cookies in Next 15+, so /i/<code> hands the code over via ?inv=). */
+function writeInviteCookie(code: string): void {
+  if (typeof document === "undefined") return;
+  const day = 60 * 60 * 24;
+  const secure = location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `pc_invite=${code}; Max-Age=${day}; Path=/; SameSite=Lax${secure}`;
 }
 import { useT, useI18n } from "./i18n";
 import {
@@ -57,11 +66,50 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
   const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
   const [showSealedBeat, setShowSealedBeat] = useState(false);
   const router = useRouter();
-  void router;
   const checkAbort = useRef<AbortController | null>(null);
   const inscriptionStartRef = useRef<number | null>(null);
 
   void _size;
+
+  // Capture an invite handed off from /i/<code>?inv=ABCD2345 into the
+  // pc_invite cookie, then drop the query so the URL stays clean.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const inv = url.searchParams.get("inv");
+    if (!inv) return;
+    if (/^[A-Z2-9]{8}$/.test(inv.toUpperCase())) {
+      writeInviteCookie(inv.toUpperCase());
+    }
+    url.searchParams.delete("inv");
+    window.history.replaceState({}, "", url.pathname + (url.search || ""));
+  }, []);
+
+  // If the signed-in user already owns a name, the gate is closed for them —
+  // skip the claim flow and send them straight to their seal. Without this,
+  // a page refresh after claiming would re-render the inscription input as if
+  // they were a fresh visitor.
+  useEffect(() => {
+    if (!authenticated || !identityToken || showSealedBeat) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/my-name", {
+          headers: { Authorization: `Bearer ${identityToken}` },
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && data.claimed && typeof data.ens === "string") {
+          router.replace(`/${data.ens}`);
+        }
+      } catch {
+        /* ignore — leave the form in idle state */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, identityToken, router, showSealedBeat]);
 
   // Debounced availability check via NameStone whenever `name` changes.
   useEffect(() => {
