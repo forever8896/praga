@@ -28,10 +28,10 @@ import {
  * The signer (Privy embedded wallet, or any EIP-191 signer) signs a fixed
  * message; the same signature always produces the same meta keys.
  */
-export const PRAGA_STEALTH_DOMAIN = "praga.stealth.v1";
-export const PRAGA_STEALTH_MESSAGE = `Sign to seal your private-gift route on Praga.\n\nDomain: ${PRAGA_STEALTH_DOMAIN}\nThis signature only derives a stealth key — it sends no funds.`;
+export const PRAGUECONNECT_STEALTH_DOMAIN = "pragueconnect.stealth.v1";
+export const PRAGUECONNECT_STEALTH_MESSAGE = `Sign to seal your private-gift route on PragueConnect.\n\nDomain: ${PRAGUECONNECT_STEALTH_DOMAIN}\nThis signature only derives a stealth key — it sends no funds.`;
 
-export interface PragaStealthKeys {
+export interface PragueConnectStealthKeys {
   /** ERC-5564 spending public key, hex */
   spendingPublicKey: `0x${string}`;
   /** ERC-5564 viewing public key, hex */
@@ -44,7 +44,7 @@ export interface PragaStealthKeys {
   metaAddress: string;
 }
 
-export function derivePragaKeys(signature: `0x${string}`): PragaStealthKeys {
+export function derivePragueConnectKeys(signature: `0x${string}`): PragueConnectStealthKeys {
   const { spendingPrivateKey, viewingPrivateKey } = generateKeysFromSignature(signature);
   // Viewing key node is the BIP-32 derivation root for ephemeral keys.
   // Per FluidKey kit: m/5564'/0'/8'/0'/0'/p'/n'

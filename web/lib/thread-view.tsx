@@ -162,7 +162,7 @@ export function ThreadView({ peer }: { peer: Peer }) {
           <Cartouche padding={28} style={{ textAlign: "center" }}>
             <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 8 }}>NO SUCH NAME</div>
             <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", marginBottom: 14 }}>
-              {peer.ens} hasn't been claimed in Praga. Threads only work between sealed names.
+              {peer.ens} hasn't been claimed in PragueConnect. Threads only work between sealed names.
             </div>
             <Link href="/feed" style={btnDark}>BACK TO THE SQUARE</Link>
           </Cartouche>

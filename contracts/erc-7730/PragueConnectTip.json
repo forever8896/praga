@@ -1,7 +1,7 @@
 {
   "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
   "context": {
-    "$id": "PragaTip — sealed gift",
+    "$id": "PragueConnectTip — sealed gift",
     "contract": {
       "deployments": [
         { "chainId": 84532, "address": "0x44b09471Ece57443FE5b9d350eF3B4f90244AB1b" }
@@ -23,10 +23,10 @@
     }
   },
   "metadata": {
-    "owner": "Praga",
+    "owner": "PragueConnect",
     "info": {
-      "legalName": "Praga — by the hand of",
-      "url": "https://praga-azure.vercel.app",
+      "legalName": "PragueConnect — by the hand of",
+      "url": "https://pragueconnect-azure.vercel.app",
       "deploymentDate": "2026-05-08"
     },
     "constants": {

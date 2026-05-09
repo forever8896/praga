@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title PragaTip — one-shot sealed gift.
-/// @notice For private tips/gifts on Praga that don't need the four-phase Magnum Opus escrow:
+/// @title PragueConnectTip — one-shot sealed gift.
+/// @notice For private tips/gifts on PragueConnect that don't need the four-phase Magnum Opus escrow:
 ///         the sender derives a stealth address from the recipient's ERC-5564 meta-address
 ///         client-side, calls `tip(...)`, and the contract atomically (a) announces via the
 ///         canonical ERC-5564 announcer so the recipient's scanner picks it up and
@@ -19,7 +19,7 @@ interface IERC5564Announcer {
     ) external;
 }
 
-contract PragaTip {
+contract PragueConnectTip {
     address public immutable announcer;
 
     /// @notice Indexed for the receipt UI to scan; metadata mirrors the announcer args.

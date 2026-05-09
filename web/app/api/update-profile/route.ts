@@ -1,4 +1,4 @@
-// POST /api/update-profile — update text records on the caller's praga.eth subname.
+// POST /api/update-profile — update text records on the caller's pragueconnect.eth subname.
 // Authenticated via Privy access token. Caller can only edit a subname whose
 // `address` field on NameStone matches their verified wallet.
 import { NextResponse } from "next/server";
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       },
       process.env.NAMESTONE_API_KEY,
     );
-    return NextResponse.json({ ok: true, ens: `${label}.praga.eth` });
+    return NextResponse.json({ ok: true, ens: `${label}.pragueconnect.eth` });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "namestone-failed" },

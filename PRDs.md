@@ -1,4 +1,4 @@
-# Praga — closing the five loops
+# PragueConnect — closing the five loops
 
 Five focused PRDs, in build order. Each turns a static screen into a real
 loop. The hackathon demo target ("claim → post → get hired with a stealth
@@ -18,8 +18,8 @@ Format per PRD:
 
 **Goal.** A signed-in user can edit their bio, location, avatar URL, and
 skills on `/me/edit`, press "Seal," and the changes are written to NameStone
-text records under their `<label>.praga.eth` subname. On reload, the public
-profile (`/<label>.praga.eth`) reflects the change.
+text records under their `<label>.pragueconnect.eth` subname. On reload, the public
+profile (`/<label>.pragueconnect.eth`) reflects the change.
 
 **Scope.**
 - `POST /api/update-profile` — server-only, validates Privy session, calls
@@ -53,8 +53,8 @@ profile (`/<label>.praga.eth`) reflects the change.
 - Touch: `web/lib/namestone.ts` (already supports text_records)
 
 **Acceptance.**
-- Sign in as the holder of `kilian.praga.eth`, change the bio, see the new
-  bio at `/kilian.praga.eth` after a reload
+- Sign in as the holder of `kilian.pragueconnect.eth`, change the bio, see the new
+  bio at `/kilian.pragueconnect.eth` after a reload
 - Signing in as a different wallet and trying to edit `kilian` returns 403
 
 ---
@@ -72,7 +72,7 @@ user's own subname.
    sigil, posted_at}`
 - `/compose` writes (or replaces) the array via the same `update-profile`
   route from Loop 1
-- `/feed` server-side fetches `listSubnames(praga.eth)`, expands each
+- `/feed` server-side fetches `listSubnames(pragueconnect.eth)`, expands each
   record's `offers`, flattens, sorts by `posted_at desc`, paginates 50 at a
   time
 - Filter chips (REPAIR, COOK, etc.) filter the flattened list by sigil
@@ -88,7 +88,7 @@ user's own subname.
 1. User on `/compose` fills in the form
 2. Client appends to (or replaces) the user's `offers` array, POSTs to
    `/api/update-profile`
-3. `/feed` fetches all subnames in `praga.eth`, decodes each `offers` JSON,
+3. `/feed` fetches all subnames in `pragueconnect.eth`, decodes each `offers` JSON,
    flattens
 
 **Surfaces.**
@@ -119,7 +119,7 @@ announcer. The escrow contract holds funds until released.
   ERC-6538 registry (canonical `0x6538…`)
 - `/tip/<ens>` reads the recipient's `stealth-meta-address`, derives a
   fresh ephemeral pubkey + recipient stealth address client-side, calls
-  `PragaEscrow.fund(stealthAddress, amount, jobId)`
+  `PragueConnectEscrow.fund(stealthAddress, amount, jobId)`
 - The escrow `fund` emits to the ScopeLift ERC-5564 announcer so the
   recipient (or their indexer) can detect it scanning their viewing key
 - Post-fund: `/r/<receiptId>` shows the escrow state (Funded /
@@ -130,14 +130,14 @@ announcer. The escrow contract holds funds until released.
   if the user pays gas in this loop
 - The recipient's flow to *withdraw* from the stealth address (we'll
   show the announcement; sweep is post-hackathon)
-- Tax / Czech VAT on the receipt (Praga-specific UX flair, not core)
+- Tax / Czech VAT on the receipt (PragueConnect-specific UX flair, not core)
 
 **Data flow.**
 1. Recipient (during claim) generates stealth meta-address, writes to ENS
    text record + ERC-6538 registry
 2. Tipper visits `/tip/<ens>`, reads the meta-address from NameStone
 3. Tipper's browser derives ephemeral key + stealth address (`stealth.ts`)
-4. Tipper signs `PragaEscrow.fund(stealthAddress, amount, jobId)` —
+4. Tipper signs `PragueConnectEscrow.fund(stealthAddress, amount, jobId)` —
    contract emits to ScopeLift announcer
 5. `/r/<jobId>` reads the escrow phase + tx hash to render the receipt
 
@@ -145,13 +145,13 @@ announcer. The escrow contract holds funds until released.
 - Touch: `web/lib/stealth.ts` (already exists — wire to claim flow)
 - Touch: `web/app/api/claim-name/route.ts` (write meta-address on claim)
 - Rewrite: `web/app/tip/[ensName]/page.tsx` (real funding flow)
-- Rewrite: `web/app/r/[receiptId]/page.tsx` (read PragaEscrow phase)
-- Touch: `contracts/src/PragaEscrow.sol` (already supports stealth recipient)
+- Rewrite: `web/app/r/[receiptId]/page.tsx` (read PragueConnectEscrow phase)
+- Touch: `contracts/src/PragueConnectEscrow.sol` (already supports stealth recipient)
 
 **Acceptance.**
 - Demo: claim two names in two browsers, A tips B 5 USDC, B's profile
   never reveals B's actual receiving address — block-explorer side-by-side
-  shows the announced stealth address is unlinkable to `B.praga.eth`
+  shows the announced stealth address is unlinkable to `B.pragueconnect.eth`
 - Receipt page shows "Nigredo / Funded" state with the ScopeLift announcement
 
 ---
@@ -197,7 +197,7 @@ their wallet signs an XMTP installation key.
 ## Loop 5 — The wall earns itself: Receipts from on-chain events
 
 **Goal.** The "Sealed receipts" wall on a craftsman's profile is no longer
-fixtures — each entry is a `PragaEscrow.Released` event on Base Sepolia,
+fixtures — each entry is a `PragueConnectEscrow.Released` event on Base Sepolia,
 read via viem.
 
 **Scope.**
@@ -218,7 +218,7 @@ read via viem.
 2. Route runs `viem.getLogs({ address: ESCROW, event: 'Released',
    args: { recipient: address }})`
 3. Each event → `{jobId, amount, counterparty, blockTime, txHash}`
-4. ENS-ize counterparty by matching against `listSubnames(praga.eth)`
+4. ENS-ize counterparty by matching against `listSubnames(pragueconnect.eth)`
 
 **Surfaces.**
 - New: `web/app/api/receipts/route.ts`

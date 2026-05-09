@@ -1,7 +1,7 @@
 {
   "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
   "context": {
-    "$id": "PragaEscrow — Magnum Opus four-phase escrow",
+    "$id": "PragueConnectEscrow — Magnum Opus four-phase escrow",
     "contract": {
       "deployments": [
         { "chainId": 84532, "address": "0xcec992ABAfA04cD2F0c89BFAa93bdae3bF9da67F" }
@@ -57,10 +57,10 @@
     }
   },
   "metadata": {
-    "owner": "Praga",
+    "owner": "PragueConnect",
     "info": {
-      "legalName": "Praga — by the hand of",
-      "url": "https://praga-azure.vercel.app",
+      "legalName": "PragueConnect — by the hand of",
+      "url": "https://pragueconnect-azure.vercel.app",
       "deploymentDate": "2026-05-08"
     },
     "constants": {

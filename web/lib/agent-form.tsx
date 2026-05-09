@@ -2,7 +2,7 @@
 
 // ENSIP-25 agent delegation. The human signs an attestation that names an
 // agent address + scopes + expiry. The attestation is stored as the
-// `agent-registration` text record on `<label>.praga.eth`. Any client (or
+// `agent-registration` text record on `<label>.pragueconnect.eth`. Any client (or
 // agent) reading the subname can verify what the human authorised.
 //
 // This is a creative use of ENS for the AI Agents bounty: no ENSIP yet
@@ -123,7 +123,7 @@ export function AgentForm() {
       const expiresAt = issuedAt + days * 86400;
       const myAddr = (user?.wallet?.address ?? "") as `0x${string}`;
       const message = [
-        "Praga · ENSIP-25 agent delegation",
+        "PragueConnect · ENSIP-25 agent delegation",
         `principal: ${myName.ens}`,
         `agent: ${agentAddress.toLowerCase()}`,
         `scopes: ${[...scopes].sort().join(",")}`,
@@ -207,7 +207,7 @@ export function AgentForm() {
           <FleurDeLis size={28} style={{ margin: "0 auto 12px" }} />
           <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 8 }}>NO NAME YET</div>
           <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", marginBottom: 18, lineHeight: 1.55 }}>
-            Claim your name in Praga first. A familiar lives under it.
+            Claim your name in PragueConnect first. A familiar lives under it.
           </div>
           <Link href="/" style={btnDark}>CLAIM A NAME</Link>
         </Cartouche>

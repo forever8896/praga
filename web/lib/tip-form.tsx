@@ -1,7 +1,7 @@
 "use client";
 
 // The tip flow: read recipient's ERC-5564 meta-address, derive a fresh stealth
-// address client-side, send ETH via PragaTip on Base Sepolia. Single tx —
+// address client-side, send ETH via PragueConnectTip on Base Sepolia. Single tx —
 // transfer + announce atomically.
 import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
@@ -104,7 +104,7 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
       }
       void usingStealth;
 
-      // 2. Encode PragaTip.tip(stealth, ephem, viewTag, memo) call.
+      // 2. Encode PragueConnectTip.tip(stealth, ephem, viewTag, memo) call.
       const data = encodeFunctionData({
         abi: TIP_ABI,
         functionName: "tip",
@@ -166,7 +166,7 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
 
           {!tipAddr && (
             <div className="t-italic" style={{ fontSize: 13, color: "var(--vermilion)", padding: "10px 14px", background: "var(--bone)", border: "0.5px solid var(--vermilion)", marginBottom: 14 }}>
-              The tip contract isn't deployed yet on this network. Once <code className="t-mono">NEXT_PUBLIC_PRAGA_TIP_ADDRESS</code> is set, this flow becomes a single transaction.
+              The tip contract isn't deployed yet on this network. Once <code className="t-mono">NEXT_PUBLIC_PRAGUECONNECT_TIP_ADDRESS</code> is set, this flow becomes a single transaction.
             </div>
           )}
 

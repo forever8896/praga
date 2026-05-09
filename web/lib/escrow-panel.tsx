@@ -13,7 +13,7 @@ import { usePrivy, useSendTransaction, useSignMessage } from "@privy-io/react-au
 import { encodeFunctionData, parseEther } from "viem";
 import { ESCROW_ABI, deriveTaskId, loadTask, type OnchainTask, type Phase, PHASE_LABELS } from "./escrow";
 import { env } from "./env";
-import { paymentAddress, derivePragaKeys, PRAGA_STEALTH_MESSAGE } from "./stealth";
+import { paymentAddress, derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { WaxSeal, FleurDeLis } from "./ornaments";
 import { useT } from "./i18n";
 
@@ -137,8 +137,8 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         // We're the worker; the recipient (us) is described by *our* meta-address
         // which, in this thread context, is what the peer has stored about *us* — but
         // we don't have access to it directly. So we re-derive from a signature.
-        const { signature } = await signMessage({ message: PRAGA_STEALTH_MESSAGE });
-        const keys = derivePragaKeys(signature as `0x${string}`);
+        const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
+        const keys = derivePragueConnectKeys(signature as `0x${string}`);
         const out = paymentAddress(keys.metaAddress);
         stealthAddr = out.stealthAddress;
         ephemeralPubKey = out.ephemeralPublicKey;

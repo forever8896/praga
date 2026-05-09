@@ -7,7 +7,7 @@ import { usePrivy, useSignMessage, useIdentityToken } from "@privy-io/react-auth
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FleurDeLis } from "./ornaments";
-import { derivePragaKeys, PRAGA_STEALTH_MESSAGE } from "./stealth";
+import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { useT } from "./i18n";
 
 type ClaimState =
@@ -104,8 +104,8 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
       // /me/edit. This makes private gifts work out of the box for new users.
       try {
         setClaimState("sealing-stealth");
-        const { signature } = await signMessage({ message: PRAGA_STEALTH_MESSAGE });
-        const keys = derivePragaKeys(signature as `0x${string}`);
+        const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
+        const keys = derivePragueConnectKeys(signature as `0x${string}`);
         // identityToken may not be present immediately after first login; wait briefly.
         let token = identityToken;
         for (let i = 0; i < 8 && !token; i++) {
@@ -131,7 +131,7 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         setClaimState("fully-sealed");
       }
       // Brief pause for the seal-press feel, then visit the new personal site.
-      setTimeout(() => router.push(`/${name}.praga.eth`), 600);
+      setTimeout(() => router.push(`/${name}.pragueconnect.eth`), 600);
     } catch (e) {
       setClaimState("error");
       setErrorMsg(e instanceof Error ? e.message : "The line to Prague was busy.");
@@ -178,7 +178,7 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
           autoCorrect="off"
           spellCheck={false}
         />
-        <span style={{ color: "var(--ink-50)" }}>.praga.eth</span>
+        <span style={{ color: "var(--ink-50)" }}>.pragueconnect.eth</span>
       </div>
       <div
         className="t-mono"
@@ -205,15 +205,15 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
           : claimState === "claiming"
           ? "…"
           : claimState === "claimed"
-          ? `✓ ${name}.praga.eth ✓`
+          ? `✓ ${name}.pragueconnect.eth ✓`
           : claimState === "sealing-stealth"
           ? "…"
           : claimState === "fully-sealed"
-          ? `✓ ${name}.praga.eth ✓`
+          ? `✓ ${name}.pragueconnect.eth ✓`
           : claimState === "taken"
-          ? `${name}.praga.eth ${t("onboard.taken")}`
+          ? `${name}.pragueconnect.eth ${t("onboard.taken")}`
           : claimState === "available"
-          ? `✓ ${name}.praga.eth ${t("onboard.available")}`
+          ? `✓ ${name}.pragueconnect.eth ${t("onboard.available")}`
           : ""}
       </div>
 
@@ -263,7 +263,7 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         ) : !name ? (
           t("onboard.button.seal")
         ) : (
-          `${t("onboard.button.claim")} ${name.toUpperCase()}.PRAGA.ETH`
+          `${t("onboard.button.claim")} ${name.toUpperCase()}.PRAGUECONNECT.ETH`
         )}
       </button>
 

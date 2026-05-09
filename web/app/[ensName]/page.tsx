@@ -1,4 +1,4 @@
-// Screen 3 — Profile / personal site (`username.praga.eth.limo`)
+// Screen 3 — Profile / personal site (`username.pragueconnect.eth.limo`)
 // Reads the actual NameStone record for the requested label. If the name has
 // not been claimed yet, we show a "not yet inscribed" placeholder.
 import { AlchemicalSigil, Cartouche, FleurDeLis, Marginalia, WaxSeal } from "@/lib/ornaments";
@@ -34,7 +34,7 @@ interface ProfileData {
 }
 
 async function loadProfile(rawName: string): Promise<ProfileData> {
-  const ens = rawName.includes(".") ? rawName : `${rawName}.praga.eth`;
+  const ens = rawName.includes(".") ? rawName : `${rawName}.pragueconnect.eth`;
   const label = ens.split(".")[0];
 
   const record = await getSubname(env.namestoneDomain, label).catch(() => null);
@@ -149,7 +149,7 @@ function NotYetInscribed({ ens }: { ens: string }) {
         <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 8 }}>UNCLAIMED INSCRIPTION</div>
         <div className="t-mono" style={{ fontSize: 18, letterSpacing: "-0.01em", marginBottom: 12, wordBreak: "break-all" }}>{ens}</div>
         <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", lineHeight: 1.55, marginBottom: 18 }}>
-          No-one has yet sealed this name in Praga. The page will be carved when its bearer presses the seal.
+          No-one has yet sealed this name in PragueConnect. The page will be carved when its bearer presses the seal.
         </div>
         <a href="/" className="t-display" style={{ display: "inline-block", padding: "12px 22px", background: "var(--ink)", color: "var(--parchment)", fontSize: 12, letterSpacing: "0.3em", textDecoration: "none" }}>
           CLAIM A NAME
@@ -163,7 +163,7 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
   if (!profile.isClaimed) {
     return <div className="mobile-only"><NotYetInscribed ens={profile.ens} /></div>;
   }
-  const bio = profile.bio || (profile.isDemoSeed ? KILIAN_BIO : `${profile.display} has just inscribed their name in Praga. The bio, the catalogue and the wall will fill as the work begins.`);
+  const bio = profile.bio || (profile.isDemoSeed ? KILIAN_BIO : `${profile.display} has just inscribed their name in PragueConnect. The bio, the catalogue and the wall will fill as the work begins.`);
   const showRichDemo = profile.isDemoSeed;
   return (
     <div className="parchment-surface mobile-only" style={{ width: "100%", minHeight: "100vh", padding: "12px 24px 32px" }}>
@@ -216,7 +216,7 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
 
       <div style={{ marginTop: 28, padding: "20px 0", borderTop: "0.5px solid var(--gilded)", borderBottom: "0.5px solid var(--gilded)", textAlign: "center" }}>
         <div className="t-cer" style={{ fontSize: 22, color: "var(--ink)" }}>Verus Sigillum</div>
-        <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", marginTop: 6 }}>this site is sealed by Praga · the name belongs to the human</div>
+        <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", marginTop: 6 }}>this site is sealed by PragueConnect · the name belongs to the human</div>
         <FleurDeLis size={20} style={{ margin: "12px auto 0" }} />
         {profile.address && (
           <div className="t-mono" style={{ fontSize: 10, color: "var(--ink-50)", marginTop: 8 }}>
@@ -232,14 +232,14 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
   if (!profile.isClaimed) {
     return <div className="desktop-only"><NotYetInscribed ens={profile.ens} /></div>;
   }
-  const bio = profile.bio || (profile.isDemoSeed ? KILIAN_BIO : `${profile.display} has just inscribed their name in Praga. The bio, the catalogue and the wall will fill as the work begins.`);
+  const bio = profile.bio || (profile.isDemoSeed ? KILIAN_BIO : `${profile.display} has just inscribed their name in PragueConnect. The bio, the catalogue and the wall will fill as the work begins.`);
   const showRichDemo = profile.isDemoSeed;
   const dropChar = bio.charAt(0).toUpperCase();
   return (
     <div className="parchment-surface desktop-only" style={{ width: "100%", minHeight: "100vh", padding: "32px 56px 56px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <span className="t-mono" style={{ fontSize: 12, color: "var(--ink-70)" }}>{profile.ens}.limo</span>
-        <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-50)", letterSpacing: "0.15em" }}>PRAGA · A SEALED PERSONAL SITE</span>
+        <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-50)", letterSpacing: "0.15em" }}>PRAGUECONNECT · A SEALED PERSONAL SITE</span>
       </div>
       <div className="hr-double" style={{ marginBottom: 24 }} />
 
@@ -310,7 +310,7 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
           <div style={{ marginTop: 48, padding: "24px 0", borderTop: "0.5px solid var(--gilded)", borderBottom: "0.5px solid var(--gilded)", textAlign: "center" }}>
             <div className="t-cer" style={{ fontSize: 36, color: "var(--ink)" }}>Verus Sigillum</div>
             <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", marginTop: 8 }}>
-              this site is sealed by Praga · the name belongs to the human · reputation travels with the name
+              this site is sealed by PragueConnect · the name belongs to the human · reputation travels with the name
             </div>
             <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 16 }}>
               <FleurDeLis size={22} />

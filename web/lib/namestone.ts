@@ -1,10 +1,10 @@
-// NameStone client — issues `username.praga.eth` subnames via NameStone's hosted offchain resolver.
+// NameStone client — issues `username.pragueconnect.eth` subnames via NameStone's hosted offchain resolver.
 // Docs: https://namestone.com/docs · SDK: https://github.com/namestonehq/namestone-sdk
 //
 // Mainnet base:  https://namestone.com/api/public_v1
 // Sepolia base:  https://namestone.com/api/public_v1_sepolia   ← what we use for the hackathon demo
 //
-// Subname text records used by Praga:
+// Subname text records used by PragueConnect:
 //   name                   → display name
 //   description            → bio (markdown)
 //   avatar                 → portrait URL
@@ -13,7 +13,7 @@
 //   skills                 → JSON array of {kind, name, price}
 //   stealth-meta-address   → ERC-5564 stealth meta-address (st:eth:0x…)
 //   agent-registration     → ENSIP-25 agent attestation (cf. ERC-8004)
-//   contenthash            → IPNS pointer for personal site at *.praga.eth.limo
+//   contenthash            → IPNS pointer for personal site at *.pragueconnect.eth.limo
 import { env } from "./env";
 
 const MAINNET_BASE = "https://namestone.com/api/public_v1";
@@ -23,12 +23,12 @@ const SEPOLIA_BASE = "https://namestone.com/api/public_v1_sepolia";
 export function namestoneBase(): string {
   // Chain IDs that imply we should use NameStone's mainnet path.
   // Anything else (Sepolia, Base Sepolia for the demo) goes to the Sepolia path,
-  // because that's where praga.eth is registered.
+  // because that's where pragueconnect.eth is registered.
   return env.defaultChainId === 1 ? MAINNET_BASE : SEPOLIA_BASE;
 }
 
 export interface NameStoneSetNameRequest {
-  domain: string; // e.g. "praga.eth"
+  domain: string; // e.g. "pragueconnect.eth"
   name: string; // label, e.g. "kilian"
   address: `0x${string}`;
   text_records?: Record<string, string>;
@@ -60,7 +60,7 @@ async function ns<T>(method: "GET" | "POST", path: string, body?: unknown, apiKe
   return res.json() as Promise<T>;
 }
 
-/** Issue or update a `<label>.praga.eth` subname. Server-only — needs API key. */
+/** Issue or update a `<label>.pragueconnect.eth` subname. Server-only — needs API key. */
 export async function setSubname(req: NameStoneSetNameRequest, apiKey: string): Promise<{ success: boolean }> {
   return ns("POST", "/set-name", req, apiKey);
 }

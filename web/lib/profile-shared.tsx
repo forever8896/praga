@@ -80,7 +80,7 @@ export function ReceiptStrip({ r }: { r: Receipt }) {
   );
 }
 
-export function ProfileHeader({ size = "desktop", name = "Kilian Praga", ens = "kilian.skol.eth" }: { size?: "mobile" | "desktop"; name?: string; ens?: string }) {
+export function ProfileHeader({ size = "desktop", name = "Kilian PragueConnect", ens = "kilian.skol.eth" }: { size?: "mobile" | "desktop"; name?: string; ens?: string }) {
   const display = size === "mobile" ? 36 : 96;
   const sub = size === "mobile" ? 12 : 16;
   return (

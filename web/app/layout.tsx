@@ -35,13 +35,13 @@ const ceremonial = UnifrakturCook({
 });
 
 export const metadata: Metadata = {
-  title: "Praga — by the hand of",
+  title: "PragueConnect — by the hand of",
   description:
     "A peer-to-peer marketplace for human favors in Prague. Reputation belongs to the human, not the platform.",
   openGraph: {
-    title: "Praga",
+    title: "PragueConnect",
     description: "By the hand of — Prague's sealed marketplace.",
-    siteName: "Praga",
+    siteName: "PragueConnect",
   },
 };
 

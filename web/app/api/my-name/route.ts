@@ -1,4 +1,4 @@
-// GET /api/my-name — return the caller's praga.eth subname (if any) and its
+// GET /api/my-name — return the caller's pragueconnect.eth subname (if any) and its
 // current text records, so the edit form can pre-populate.
 import { NextResponse } from "next/server";
 import { listSubnames } from "@/lib/namestone";

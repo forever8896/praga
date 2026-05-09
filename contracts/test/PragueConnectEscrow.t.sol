@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import { Test } from "forge-std/Test.sol";
-import { PragaEscrow } from "../src/PragaEscrow.sol";
+import { PragueConnectEscrow } from "../src/PragueConnectEscrow.sol";
 
 contract MockAnnouncer {
     event Announced(uint256 schemeId, address stealthAddress, bytes ephPub, bytes metadata);
@@ -17,8 +17,8 @@ contract MockAnnouncer {
     }
 }
 
-contract PragaEscrowTest is Test {
-    PragaEscrow internal escrow;
+contract PragueConnectEscrowTest is Test {
+    PragueConnectEscrow internal escrow;
     MockAnnouncer internal announcer;
 
     address internal lucia = makeAddr("lucia");
@@ -31,12 +31,12 @@ contract PragaEscrowTest is Test {
 
     function setUp() public {
         announcer = new MockAnnouncer();
-        escrow = new PragaEscrow(address(announcer));
+        escrow = new PragueConnectEscrow(address(announcer));
         vm.deal(lucia, 10 ether);
     }
 
-    function _phaseOf(bytes32 id) internal view returns (PragaEscrow.Phase) {
-        (, , , , PragaEscrow.Phase p, , , ) = escrow.tasks(id);
+    function _phaseOf(bytes32 id) internal view returns (PragueConnectEscrow.Phase) {
+        (, , , , PragueConnectEscrow.Phase p, , , ) = escrow.tasks(id);
         return p;
     }
 
@@ -54,25 +54,25 @@ contract PragaEscrowTest is Test {
         // Nigredo
         vm.prank(lucia);
         escrow.fund{ value: 0.01 ether }(taskId, kilian);
-        assertEq(uint8(_phaseOf(taskId)), uint8(PragaEscrow.Phase.Nigredo));
+        assertEq(uint8(_phaseOf(taskId)), uint8(PragueConnectEscrow.Phase.Nigredo));
         assertEq(_amountOf(taskId), 0.01 ether);
 
         // Albedo
         vm.prank(kilian);
         escrow.accept(taskId, stealth, ephPub, viewTag);
-        assertEq(uint8(_phaseOf(taskId)), uint8(PragaEscrow.Phase.Albedo));
+        assertEq(uint8(_phaseOf(taskId)), uint8(PragueConnectEscrow.Phase.Albedo));
 
         // Citrinitas
         vm.prank(kilian);
         escrow.deliver(taskId);
-        assertEq(uint8(_phaseOf(taskId)), uint8(PragaEscrow.Phase.Citrinitas));
+        assertEq(uint8(_phaseOf(taskId)), uint8(PragueConnectEscrow.Phase.Citrinitas));
         assertGt(_deliveredAtOf(taskId), 0);
 
         // Rubedo — funder releases with rating 5
         uint256 stealthBalBefore = stealth.balance;
         vm.prank(lucia);
         escrow.release(taskId, 5);
-        assertEq(uint8(_phaseOf(taskId)), uint8(PragaEscrow.Phase.Rubedo));
+        assertEq(uint8(_phaseOf(taskId)), uint8(PragueConnectEscrow.Phase.Rubedo));
         assertEq(stealth.balance - stealthBalBefore, 0.01 ether);
     }
 
@@ -100,7 +100,7 @@ contract PragaEscrowTest is Test {
         escrow.deliver(taskId);
 
         // Without grace, worker self-release reverts
-        vm.expectRevert(PragaEscrow.NotPartyOrTimeout.selector);
+        vm.expectRevert(PragueConnectEscrow.NotPartyOrTimeout.selector);
         vm.prank(kilian);
         escrow.release(taskId, 5);
     }
@@ -134,11 +134,11 @@ contract PragaEscrowTest is Test {
         vm.prank(kilian);
         escrow.deliver(taskId);
 
-        vm.expectRevert(PragaEscrow.InvalidRating.selector);
+        vm.expectRevert(PragueConnectEscrow.InvalidRating.selector);
         vm.prank(lucia);
         escrow.release(taskId, 0);
 
-        vm.expectRevert(PragaEscrow.InvalidRating.selector);
+        vm.expectRevert(PragueConnectEscrow.InvalidRating.selector);
         vm.prank(lucia);
         escrow.release(taskId, 6);
     }
@@ -153,7 +153,7 @@ contract PragaEscrowTest is Test {
 
         bytes32 expected = keccak256(abi.encodePacked(stealth, taskId, uint8(5)));
         vm.expectEmit(true, false, false, true);
-        emit PragaEscrow.TaskReleased(taskId, 5, expected);
+        emit PragueConnectEscrow.TaskReleased(taskId, 5, expected);
         vm.prank(lucia);
         escrow.release(taskId, 5);
     }

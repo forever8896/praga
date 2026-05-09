@@ -1,5 +1,5 @@
-// Server-side helper: read PragaTip.Tipped events from Base Sepolia and
-// resolve sender/recipient ENS labels by checking against praga.eth subnames.
+// Server-side helper: read PragueConnectTip.Tipped events from Base Sepolia and
+// resolve sender/recipient ENS labels by checking against pragueconnect.eth subnames.
 import { createPublicClient, http, parseAbiItem, type Log } from "viem";
 import { baseSepolia } from "viem/chains";
 import { env } from "./env";
@@ -36,7 +36,7 @@ export async function loadTipReceipts(opts: QueryOpts = {}): Promise<TipReceipt[
 
   const client = createPublicClient({ chain: baseSepolia, transport: http(env.baseSepoliaRpcUrl) });
 
-  // PragaTip was deployed on 2026-05-08. We start from a recent block.
+  // PragueConnectTip was deployed on 2026-05-08. We start from a recent block.
   // For the demo dataset (tens of events) a single getLogs call is fine.
   const latest = await client.getBlockNumber();
   const fromBlock = latest > BigInt(50_000) ? latest - BigInt(50_000) : BigInt(0);
@@ -53,7 +53,7 @@ export async function loadTipReceipts(opts: QueryOpts = {}): Promise<TipReceipt[
   });
 
   // Reverse-resolve addresses to ENS labels (best effort) by listing all
-  // praga.eth subnames once per request.
+  // pragueconnect.eth subnames once per request.
   let subnames: NameStoneRecord[] = [];
   try {
     subnames = await listSubnames(env.namestoneDomain, 200);

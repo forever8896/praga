@@ -50,7 +50,7 @@ export default function SpecPage() {
   return (
     <div className="parchment-surface" style={{ width: "100%", minHeight: "100vh", padding: "64px 80px", position: "relative", fontFamily: "var(--body)", color: "var(--ink)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div className="t-mono" style={{ fontSize: 11, letterSpacing: "0.2em", color: "var(--ink-50)" }}>PRAGA · ANNO MMXXVI · PRAGUE</div>
+        <div className="t-mono" style={{ fontSize: 11, letterSpacing: "0.2em", color: "var(--ink-50)" }}>PRAGUECONNECT · ANNO MMXXVI · PRAGUE</div>
         <div className="t-mono" style={{ fontSize: 11, letterSpacing: "0.2em", color: "var(--ink-50)" }}>SYSTEM · SPEC · LEAF I</div>
       </div>
       <div className="hr-double" style={{ marginBottom: 24 }} />
@@ -64,7 +64,7 @@ export default function SpecPage() {
         </div>
         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
           <FleurDeLis size={56} />
-          <WaxSeal size={88} state="rubedo" rotate={-8} emboss="fleur" label="PRAGA · VERIFIED ·" />
+          <WaxSeal size={88} state="rubedo" rotate={-8} emboss="fleur" label="PRAGUECONNECT · VERIFIED ·" />
         </div>
       </div>
 
@@ -86,7 +86,7 @@ export default function SpecPage() {
       <SpecBlock number="II" title="Type — the chiseled, the hand, the metal" sub="Four registers. Each does typographic work or is removed.">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
           <SpecTypeRow label="Display · Cormorant SC" role="Section titles · ENS on profile · 'chiseled inscription'">
-            <div className="t-display" style={{ fontSize: 56, letterSpacing: "0.05em", lineHeight: 1 }}>Kilian Praga</div>
+            <div className="t-display" style={{ fontSize: 56, letterSpacing: "0.05em", lineHeight: 1 }}>Kilian PragueConnect</div>
             <div className="t-display" style={{ fontSize: 22, letterSpacing: "0.16em", marginTop: 8, color: "var(--ink-70)" }}>BY THIS RECEIPT</div>
           </SpecTypeRow>
           <SpecTypeRow label="Body · EB Garamond" role="All human-written copy · italic real, descenders long">
@@ -100,7 +100,7 @@ export default function SpecPage() {
             <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", marginTop: 6 }}>Never for anything that has to be read fast.</div>
           </SpecTypeRow>
           <SpecTypeRow label="Data · JetBrains Mono" role="ENS strings · attestation hashes · 'the metal'">
-            <div className="t-mono" style={{ fontSize: 18 }}>kilian.praga.eth</div>
+            <div className="t-mono" style={{ fontSize: 18 }}>kilian.pragueconnect.eth</div>
             <div className="t-mono" style={{ fontSize: 13, color: "var(--ink-70)", marginTop: 6 }}>attest · 0x9af3…b21c · sealed at 14:22 CET</div>
           </SpecTypeRow>
         </div>
@@ -148,7 +148,7 @@ export default function SpecPage() {
             ["Released", "Rubedo · the reddening", "rubedo", "fleur", "Final stamped seal — fleur pressed in."],
           ] as const).map(([state, phase, k, em, desc], i) => (
             <div key={k} style={{ background: "var(--bone)", padding: 24, border: "0.5px solid var(--gilded)", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-              <WaxSeal size={140} state={k} rotate={[-8, -3, 5, -6][i]} emboss={em} label={`${state.toUpperCase()} · PRAGA ·`} />
+              <WaxSeal size={140} state={k} rotate={[-8, -3, 5, -6][i]} emboss={em} label={`${state.toUpperCase()} · PRAGUECONNECT ·`} />
               <div className="t-display" style={{ fontSize: 16, letterSpacing: "0.2em", marginTop: 16 }}>{state}</div>
               <div className="t-mono" style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--ink-70)", marginTop: 6 }}>{phase.toUpperCase()}</div>
               <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", marginTop: 10, lineHeight: 1.4 }}>{desc}</div>
@@ -161,8 +161,8 @@ export default function SpecPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 28 }}>
           <Cartouche tone="bone" style={{ minHeight: 240 }} padding={36}>
             <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--vermilion)" }}>Cartouche · example</div>
-            <div className="t-display" style={{ fontSize: 28, letterSpacing: "0.05em", marginTop: 6 }}>Kilian Praga</div>
-            <div className="t-mono" style={{ fontSize: 13, marginTop: 4, color: "var(--ink-70)" }}>kilian.praga.eth</div>
+            <div className="t-display" style={{ fontSize: 28, letterSpacing: "0.05em", marginTop: 6 }}>Kilian PragueConnect</div>
+            <div className="t-mono" style={{ fontSize: 13, marginTop: 4, color: "var(--ink-70)" }}>kilian.pragueconnect.eth</div>
             <div className="t-italic" style={{ fontSize: 14, marginTop: 14, lineHeight: 1.5, maxWidth: 420, color: "var(--ink-70)" }}>
               The asymmetric scrollwork is engraved in 0.5pt gilded hairline. The frame should look chiseled into the page, not stickered onto it.
             </div>

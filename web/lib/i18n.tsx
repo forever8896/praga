@@ -77,7 +77,7 @@ const DICT: Dict = {
   "profile.openThreadBlurb2": { en: "on XMTP", cs: "na XMTP" },
   "profile.unclaimed": { en: "UNCLAIMED INSCRIPTION", cs: "NEZAPEČETĚNÝ ZÁPIS" },
   "profile.unclaimedBody": {
-    en: "No-one has yet sealed this name in Praga. The page will be carved when its bearer presses the seal.",
+    en: "No-one has yet sealed this name in PragueConnect. The page will be carved when its bearer presses the seal.",
     cs: "Toto jméno v Praze nikdo nezapečetil. Stránka vznikne, jakmile jí nositel přitiskne pečeť.",
   },
   "profile.claim": { en: "CLAIM A NAME", cs: "ZÍSKAT JMÉNO" },
@@ -123,7 +123,7 @@ const DICT: Dict = {
   "thread.peerBackSuffix": { en: "'s seal", cs: " · pečeť" },
   "thread.notFound": { en: "NO SUCH NAME", cs: "TAKOVÉ JMÉNO NEEXISTUJE" },
   "thread.notFoundBody": {
-    en: "hasn't been claimed in Praga. Threads only work between sealed names.",
+    en: "hasn't been claimed in PragueConnect. Threads only work between sealed names.",
     cs: "v Praze nezapečetili. Vlákna fungují jen mezi zapečetěnými jmény.",
   },
   "thread.backToSquare": { en: "BACK TO THE SQUARE", cs: "ZPĚT NA NÁMĚSTÍ" },
@@ -235,7 +235,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("praga.lang");
+      const stored = localStorage.getItem("pragueconnect.lang");
       if (stored === "cs" || stored === "en") setLangState(stored);
     } catch {}
   }, []);
@@ -243,7 +243,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try {
-      localStorage.setItem("praga.lang", l);
+      localStorage.setItem("pragueconnect.lang", l);
     } catch {}
   }, []);
 

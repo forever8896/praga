@@ -181,7 +181,7 @@ function MobileFeed({ offers, all, filter, setFilter, search, setSearch }: FeedP
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
           <div>
             <div className="t-display" style={{ fontSize: 10, letterSpacing: "0.35em", color: "var(--vermilion)" }}>{t("feed.eyebrow")}</div>
-            <div className="t-display" style={{ fontSize: 30, letterSpacing: "0.04em", lineHeight: 1 }}>Praga, V.viii</div>
+            <div className="t-display" style={{ fontSize: 30, letterSpacing: "0.04em", lineHeight: 1 }}>PragueConnect, V.viii</div>
           </div>
           <FleurDeLis size={26} />
         </div>

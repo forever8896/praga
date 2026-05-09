@@ -1,4 +1,4 @@
-// PragaEscrow client helpers — derive a deterministic taskId from a thread
+// PragueConnectEscrow client helpers — derive a deterministic taskId from a thread
 // pair, read on-chain task state, and expose an ABI for fund/accept/deliver/
 // release calls.
 import { createPublicClient, http, keccak256, encodePacked } from "viem";
@@ -52,7 +52,7 @@ export interface OnchainTask {
 
 /** Deterministic taskId for a thread between two ENS-bound addresses.
  *  Both sides of the conversation compute the same id regardless of who funds. */
-export function deriveTaskId(addrA: `0x${string}`, addrB: `0x${string}`, salt = "praga.thread.v1"): `0x${string}` {
+export function deriveTaskId(addrA: `0x${string}`, addrB: `0x${string}`, salt = "pragueconnect.thread.v1"): `0x${string}` {
   const [first, second] = [addrA.toLowerCase() as `0x${string}`, addrB.toLowerCase() as `0x${string}`].sort();
   return keccak256(encodePacked(["address", "address", "string"], [first, second, salt]));
 }

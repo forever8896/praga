@@ -1,4 +1,4 @@
-# Claude Design Brief — Praga
+# Claude Design Brief — PragueConnect
 
 > Paste this verbatim into Claude Design. One direction, locked. Render every screen in this language.
 
@@ -6,7 +6,7 @@
 
 ## The product (one paragraph)
 
-Praga is a peer-to-peer marketplace for humans in Prague to offer micro-skills, favors, and gifts to each other for small crypto payments — handyman work, language exchange, rides, cooking, tutoring, errands, gifts. The unit of trust is a *person*, not a platform. Every user gets an ENS name (`yourname.praga.eth`) that is simultaneously their identity, their public website (auto-rendered at `yourname.praga.eth.limo`), and the route through which payments — including private stealth-address payments — reach them. Reputation lives on the human, not the platform. Escrow is non-custodial. Messaging is end-to-end encrypted.
+PragueConnect is a peer-to-peer marketplace for humans in Prague to offer micro-skills, favors, and gifts to each other for small crypto payments — handyman work, language exchange, rides, cooking, tutoring, errands, gifts. The unit of trust is a *person*, not a platform. Every user gets an ENS name (`yourname.pragueconnect.eth`) that is simultaneously their identity, their public website (auto-rendered at `yourname.pragueconnect.eth.limo`), and the route through which payments — including private stealth-address payments — reach them. Reputation lives on the human, not the platform. Escrow is non-custodial. Messaging is end-to-end encrypted.
 
 We are designing both the **mobile app** and the **underlying web app** as one product, two viewports — same DNA, the desktop has more room to breathe.
 
@@ -62,7 +62,7 @@ Generous size. Loose leading. Body 16-17px on mobile, 18-19px on web.
 
 3. **Cartouche frames** — profile cards and reputation receipts are framed with delicate engraved cartouches (asymmetric scrollwork), `Gilded` 0.5pt hairlines on `Parchment`. They should look *engraved*, not stickered.
 
-4. **Wax seals as reputation badges.** "Verified by Praga" is a deep-vermilion wax seal with a fleur-de-lis pressed in. Slightly off-axis. Subtle texture (cracks, edge irregularity). Used sparingly — once per profile, once per completed task receipt.
+4. **Wax seals as reputation badges.** "Verified by PragueConnect" is a deep-vermilion wax seal with a fleur-de-lis pressed in. Slightly off-axis. Subtle texture (cracks, edge irregularity). Used sparingly — once per profile, once per completed task receipt.
 
 5. **Marginalia** — desktop screens (only) carry hand-drawn marginalia in the side margins: small alchemical diagrams, an astrological glyph, a scribbled fleur-de-lis, a tiny squared circle, a Prague tram route reduced to a constellation. Decorative, never interactive. Mobile drops them entirely.
 
@@ -98,12 +98,12 @@ Slow. Considered. Easing should feel like ink settling on parchment, not like CS
 For each screen, render **two artboards**: mobile at 390px, desktop at 1440px. Twelve screens × two viewports = 24 frames. The personal site gets an additional 1920px frame to show the full marginalia.
 
 ### 1. Landing / onboarding — *Claim your name in Prague*
-A single hero phrase set in Cormorant small-caps. Live ENS-name input (`___.praga.eth`) as the central element, treated like an inscription chisel. Below: an email/SMS field (Privy-style embedded wallet). No wallet jargon visible. Background: a faint engraved Prague skyline — Charles Bridge silhouette and the castle spires — rendered as parchment marginalia.
+A single hero phrase set in Cormorant small-caps. Live ENS-name input (`___.pragueconnect.eth`) as the central element, treated like an inscription chisel. Below: an email/SMS field (Privy-style embedded wallet). No wallet jargon visible. Background: a faint engraved Prague skyline — Charles Bridge silhouette and the castle spires — rendered as parchment marginalia.
 
 ### 2. Discovery feed — *the town square*
 A vertical stream of offer/request cards, each framed by a delicate cartouche. Each card shows: alchemical category sigil, person's name (ENS in mono), one-line skill, price in Kč with crypto secondary, distance ("Žižkov · 800m"). Filter chips at top render as small stamped wax tags. The whole feed should feel like a notice board pinned with seals.
 
-### 3. Profile / personal site (`username.praga.eth.limo`) — **the hero artifact**
+### 3. Profile / personal site (`username.pragueconnect.eth.limo`) — **the hero artifact**
 **Render this twice on desktop:** the in-app authenticated view AND the public web visitor view. Render the public view at 1440px AND additionally at 1920px to show full marginalia.
 
 The public view is an illuminated manuscript leaf: a cartouche masthead inscribed with the user's ENS in display caps, a hand-drawn fleur-de-lis flanking each side, a portrait roundel, a body of bio text in Garamond italic with a decorated dropcap, a "skills offered" section as a stamped catalogue, a wall of completed-task wax-seal receipts. Marginalia along both side margins: alchemical diagrams, a fleur-de-lis, an astrological sigil, a small map of Prague with a pin.
@@ -119,19 +119,19 @@ Mobile: thread fills the screen, escrow panel is a swipe-up sheet. Desktop: thre
 The escrow panel is the *Magnum Opus* diagram. **Render this screen four times — one for each escrow state — so all four wax seals (Nigredo / Albedo / Citrinitas / Rubedo) are visible.** The thread itself uses Garamond for messages, mono for any quoted ENS name. A small lock-and-fleur indicator at the top: *"this thread is sealed."*
 
 ### 6. Reputation receipt / completed task
-A formal patent of completion. Centered: the vermilion wax seal with fleur-de-lis impression, off-axis. Above: "BY THIS RECEIPT" in display caps. Body: *"kilian.praga.eth has completed [task] on [date], rated [stars]."* The stars are not stars — they are five small alchemical sigils filled in proportion to the rating. Footer: an attestation hash in mono, treated as a chiseled inscription line. **This screen should feel like something you'd actually frame.**
+A formal patent of completion. Centered: the vermilion wax seal with fleur-de-lis impression, off-axis. Above: "BY THIS RECEIPT" in display caps. Body: *"kilian.pragueconnect.eth has completed [task] on [date], rated [stars]."* The stars are not stars — they are five small alchemical sigils filled in proportion to the rating. Footer: an attestation hash in mono, treated as a chiseled inscription line. **This screen should feel like something you'd actually frame.**
 
 ### 7. Edit-your-site dashboard — *the secret authenticated view*
-Same illuminated-manuscript layout as screen 3, but with edit affordances rendered as quill-and-inkpot icons in `Gilded` next to each editable region. A clear *"you are editing your seal"* banner. Make the **subnames-as-data-shelves** concept legible: a sidebar listing the subname shelves (`bio.x.praga.eth`, `skills.x.praga.eth`, `inbox.x.praga.eth`, `stealth.x.praga.eth`) each with a small alchemical sigil indicating its data type and a public/private toggle.
+Same illuminated-manuscript layout as screen 3, but with edit affordances rendered as quill-and-inkpot icons in `Gilded` next to each editable region. A clear *"you are editing your seal"* banner. Make the **subnames-as-data-shelves** concept legible: a sidebar listing the subname shelves (`bio.x.pragueconnect.eth`, `skills.x.pragueconnect.eth`, `inbox.x.pragueconnect.eth`, `stealth.x.pragueconnect.eth`) each with a small alchemical sigil indicating its data type and a public/private toggle.
 
 ### 8. Wallet / earnings — *the ledger*
 A leather-bound ledger feel. Recent receipts as a chronological column of small wax-seal entries. Top of page: total earnings in Kč (large display caps), crypto equivalent below in mono. A subtle *"scanning for private gifts…"* status line — this is the stealth-address scanner running silently. When a stealth gift arrives, a quill-stroke animation fills a new wax-seal entry.
 
 ### 9. Stealth gift / private payment compose (web only — initiated from screen 3)
-Visitor-on-personal-site view. Modal, parchment surface, no wallet jargon. *"Send a gift to kilian.praga.eth — privately."* Amount in Kč, optional one-line note, send button as a wax-stamp press. Below in small italic Garamond: *"Your gift will reach Kilian without revealing the address it lands at. This is by design."* That single line is the only place "private" or "stealth" is explained — through copy, not jargon.
+Visitor-on-personal-site view. Modal, parchment surface, no wallet jargon. *"Send a gift to kilian.pragueconnect.eth — privately."* Amount in Kč, optional one-line note, send button as a wax-stamp press. Below in small italic Garamond: *"Your gift will reach Kilian without revealing the address it lands at. This is by design."* That single line is the only place "private" or "stealth" is explained — through copy, not jargon.
 
-### 10. Praga Agent dashboard (stretch — optional delegate)
-The user's optional delegate agent has its own subname (`agent.kilian.praga.eth`) and is rendered as a *familiar* — a small line-engraved owl, hawk, or alchemical homunculus. Cards show the agent's scoped permissions (*"may reply to messages under 50 Kč"*, *"may not move funds without approval"*), recent actions, and a single revoke-everything button rendered as a heavy wax-seal break. Agent-authored actions are visually distinct: a thinner, paler ink stroke than human-authored ones.
+### 10. PragueConnect Agent dashboard (stretch — optional delegate)
+The user's optional delegate agent has its own subname (`agent.kilian.pragueconnect.eth`) and is rendered as a *familiar* — a small line-engraved owl, hawk, or alchemical homunculus. Cards show the agent's scoped permissions (*"may reply to messages under 50 Kč"*, *"may not move funds without approval"*), recent actions, and a single revoke-everything button rendered as a heavy wax-seal break. Agent-authored actions are visually distinct: a thinner, paler ink stroke than human-authored ones.
 
 ### 11. System spec sheet (one frame, desktop only)
 A single beautifully laid-out reference page showing: full color palette as paint chips on parchment; type ramp with samples; the seven alchemical category sigils in a 2×4 grid; four fleur-de-lis variants; the four escrow-state wax seals at large size; an example cartouche frame; an example marginalia spread. **Treat this page itself as an illuminated leaf.**

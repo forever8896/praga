@@ -1,4 +1,4 @@
-// GET /api/check-name?name=<label> — is this `<label>.praga.eth` already taken?
+// GET /api/check-name?name=<label> — is this `<label>.pragueconnect.eth` already taken?
 // Public endpoint, no auth required (NameStone read is public).
 import { NextResponse } from "next/server";
 import { getSubname } from "@/lib/namestone";
@@ -16,11 +16,11 @@ export async function GET(req: Request) {
 
   const existing = await getSubname(env.namestoneDomain, raw);
   if (!existing) {
-    return NextResponse.json({ available: true, name: `${raw}.praga.eth` });
+    return NextResponse.json({ available: true, name: `${raw}.pragueconnect.eth` });
   }
   return NextResponse.json({
     available: false,
-    name: `${raw}.praga.eth`,
+    name: `${raw}.pragueconnect.eth`,
     address: existing.address,
   });
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title PragaEscrow — the Magnum Opus, on-chain.
-/// @notice Non-custodial escrow for the Praga P2P marketplace. Each task moves through the four
+/// @title PragueConnectEscrow — the Magnum Opus, on-chain.
+/// @notice Non-custodial escrow for the PragueConnect P2P marketplace. Each task moves through the four
 ///         alchemical phases — Nigredo (Funded) → Albedo (InProgress) → Citrinitas (Delivered)
 ///         → Rubedo (Released) — and on release, ETH is paid out to a *stealth* address derived
 ///         from the receiver's ERC-5564 meta-address. The contract emits a reputation
@@ -36,7 +36,7 @@ interface IERC5564Announcer {
     ) external;
 }
 
-contract PragaEscrow {
+contract PragueConnectEscrow {
     enum Phase {
         None, // 0 — uninitialized
         Nigredo, // 1 — Funded; the work has not yet begun

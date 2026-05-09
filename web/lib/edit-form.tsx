@@ -6,7 +6,7 @@ import { usePrivy, useIdentityToken, useSignMessage } from "@privy-io/react-auth
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, AlchemicalSigil, type SigilKind } from "./ornaments";
-import { derivePragaKeys, PRAGA_STEALTH_MESSAGE } from "./stealth";
+import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { useT } from "./i18n";
 
 interface Skill {
@@ -117,8 +117,8 @@ export function EditForm() {
     setSealing(true);
     setErr(null);
     try {
-      const { signature } = await signMessage({ message: PRAGA_STEALTH_MESSAGE });
-      const keys = derivePragaKeys(signature as `0x${string}`);
+      const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
+      const keys = derivePragueConnectKeys(signature as `0x${string}`);
       const res = await fetch("/api/update-profile", {
         method: "POST",
         headers: {
@@ -229,7 +229,7 @@ export function EditForm() {
           <FleurDeLis size={28} style={{ margin: "0 auto 12px" }} />
           <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 8 }}>NO NAME ON THIS WALLET</div>
           <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", marginBottom: 18, lineHeight: 1.55 }}>
-            Wallet {address?.slice(0, 6)}…{address?.slice(-4)} hasn't yet claimed a name in Praga. The seal is empty.
+            Wallet {address?.slice(0, 6)}…{address?.slice(-4)} hasn't yet claimed a name in PragueConnect. The seal is empty.
           </div>
           <a href="/" style={btnDark}>CLAIM A NAME</a>
         </Cartouche>

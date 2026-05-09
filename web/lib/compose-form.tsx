@@ -190,7 +190,7 @@ export function ComposeForm() {
           <FleurDeLis size={28} style={{ margin: "0 auto 12px" }} />
           <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 8 }}>NO NAME YET</div>
           <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", marginBottom: 18, lineHeight: 1.55 }}>
-            You need a name in Praga before you can post. Claim one first.
+            You need a name in PragueConnect before you can post. Claim one first.
           </div>
           <a href="/" style={btnDark}>CLAIM A NAME</a>
         </Cartouche>

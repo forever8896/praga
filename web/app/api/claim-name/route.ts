@@ -1,4 +1,4 @@
-// POST /api/claim-name — issues a `<name>.praga.eth` subname via NameStone.
+// POST /api/claim-name — issues a `<name>.pragueconnect.eth` subname via NameStone.
 // Server-only because the NameStone API key must not leak to the browser.
 import { NextResponse } from "next/server";
 import { getSubname, setSubname } from "@/lib/namestone";
@@ -52,12 +52,12 @@ export async function POST(req: Request) {
         text_records: {
           name: name.charAt(0).toUpperCase() + name.slice(1),
           location: "Praha",
-          url: `https://praga-azure.vercel.app/${name}.praga.eth`,
+          url: `https://pragueconnect-azure.vercel.app/${name}.pragueconnect.eth`,
         },
       },
       process.env.NAMESTONE_API_KEY,
     );
-    return NextResponse.json({ ok: true, ens: `${name}.praga.eth` });
+    return NextResponse.json({ ok: true, ens: `${name}.pragueconnect.eth` });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "namestone-failed" },

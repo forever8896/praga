@@ -1,6 +1,6 @@
 // Swarm integration — render a user's profile as static HTML, upload to a
 // Bee node, encode the resulting bzz reference as an ENS contenthash, write
-// it back to NameStone. Result: `<name>.praga.eth.limo` resolves to a real
+// it back to NameStone. Result: `<name>.pragueconnect.eth.limo` resolves to a real
 // Swarm-served personal site.
 //
 // Requires SWARM_BEE_URL + SWARM_POSTAGE_BATCH_ID env vars (the postage
@@ -66,7 +66,7 @@ export async function uploadHtmlToSwarm(html: string, fileName = "index.html"): 
 }
 
 /** Render a user's NameStone record as a self-contained HTML page suitable
- *  for serving from `<name>.praga.eth.limo`. No JS, no external assets — just
+ *  for serving from `<name>.pragueconnect.eth.limo`. No JS, no external assets — just
  *  inline CSS so the page works on any *.eth.limo gateway. */
 export function renderProfileHtml(record: NameStoneRecord): string {
   const tr = record.text_records ?? {};
@@ -85,7 +85,7 @@ export function renderProfileHtml(record: NameStoneRecord): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${display} · ${ens}</title>
-<meta name="description" content="${bio.slice(0, 160) || `${display} · sealed by Praga`}">
+<meta name="description" content="${bio.slice(0, 160) || `${display} · sealed by PragueConnect`}">
 <meta property="og:title" content="${display} · ${ens}">
 <meta property="og:description" content="${bio.slice(0, 160) || "by the hand of"}">
 <style>
@@ -183,7 +183,7 @@ export function renderProfileHtml(record: NameStoneRecord): string {
   <div class="hr"></div>
   <div class="cartouche center">
     <div class="kicker">Verus Sigillum</div>
-    <p class="italic ink70" style="margin: 8px 0">this site is sealed by Praga · the name belongs to the human</p>
+    <p class="italic ink70" style="margin: 8px 0">this site is sealed by PragueConnect · the name belongs to the human</p>
     <div class="muted" style="margin-top: 8px">${ens} · ${record.address.slice(0, 6)}…${record.address.slice(-4)}</div>
     ${
       hasStealth
@@ -192,7 +192,7 @@ export function renderProfileHtml(record: NameStoneRecord): string {
     }
   </div>
 
-  <p class="muted center" style="margin-top: 24px">served from Swarm · resolved via ENS · <a href="https://praga-azure.vercel.app/${ens}">interactive view ↗</a></p>
+  <p class="muted center" style="margin-top: 24px">served from Swarm · resolved via ENS · <a href="https://pragueconnect-azure.vercel.app/${ens}">interactive view ↗</a></p>
 </div>
 </body>
 </html>`;

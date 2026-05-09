@@ -79,7 +79,7 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
       >
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--ink)" }}>
           <FleurDeLis size={22} />
-          <span className="t-display" style={{ fontSize: 13, letterSpacing: "0.4em" }}>PRAGA</span>
+          <span className="t-display" style={{ fontSize: 13, letterSpacing: "0.4em" }}>PRAGUECONNECT</span>
         </Link>
 
         {/* Desktop links */}

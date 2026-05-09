@@ -1,6 +1,6 @@
 // POST /api/publish-site — render the caller's profile to HTML, upload to
 // Swarm via Bee, write the bzz reference back as the subname's contenthash.
-// After this, `<name>.praga.eth.limo` resolves to the Swarm-hosted page.
+// After this, `<name>.pragueconnect.eth.limo` resolves to the Swarm-hosted page.
 import { NextResponse } from "next/server";
 import { getSubname, setSubname, type NameStoneRecord } from "@/lib/namestone";
 import { verifySession } from "@/lib/privy-server";
@@ -58,8 +58,8 @@ export async function POST(req: Request) {
       ok: true,
       reference,
       contenthash,
-      ens: `${label}.praga.eth`,
-      limo: `https://${label}.praga.eth.limo`,
+      ens: `${label}.pragueconnect.eth`,
+      limo: `https://${label}.pragueconnect.eth.limo`,
       bzz: `https://api.gateway.ethswarm.org/bzz/${reference}`,
     });
   } catch (e) {

@@ -1,5 +1,5 @@
 // Screen 2 — Discovery feed — the town square. Server fetches real offers
-// from every praga.eth subname; the FeedView client component handles
+// from every pragueconnect.eth subname; the FeedView client component handles
 // filtering and rendering.
 import { loadFeed } from "@/lib/offers";
 import { FeedView } from "@/lib/feed-view";
