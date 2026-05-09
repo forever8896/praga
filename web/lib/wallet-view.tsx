@@ -5,6 +5,7 @@
 // excluding the stealth-recipient blind spot — by design).
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccessToken } from "./use-access-token";
+import { useEthCzkRate } from "./use-eth-czk";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -48,12 +49,10 @@ interface MyName {
   text_records?: Record<string, string>;
 }
 
-const KC_PER_ETH = 90_000; // hackathon-rough conversion: 1 ETH ≈ 90,000 Kč
-
-function ethToKc(ethStr: string): number {
+function ethToKc(ethStr: string, kcPerEth: number): number {
   const eth = Number.parseFloat(ethStr);
   if (!Number.isFinite(eth)) return 0;
-  return Math.round(eth * KC_PER_ETH);
+  return Math.round(eth * kcPerEth);
 }
 
 function shortAddr(a: string): string {
@@ -64,6 +63,7 @@ export function WalletView() {
   const { ready, authenticated, login, user } = usePrivy();
   const { accessToken: identityToken } = useAccessToken();
   const t = useT();
+  const kcPerEth = useEthCzkRate();
 
   const address = user?.wallet?.address as `0x${string}` | undefined;
 
@@ -123,10 +123,10 @@ export function WalletView() {
     return Number(balanceWei) / 1e18;
   }, [balanceWei]);
 
-  const balanceKc = balanceEth !== null ? Math.round(balanceEth * KC_PER_ETH) : null;
+  const balanceKc = balanceEth !== null ? Math.round(balanceEth * kcPerEth) : null;
 
-  const totalReceivedKc = received.reduce((sum, r) => sum + ethToKc(r.amountEth), 0);
-  const totalSentKc = sent.reduce((sum, r) => sum + ethToKc(r.amountEth), 0);
+  const totalReceivedKc = received.reduce((sum, r) => sum + ethToKc(r.amountEth, kcPerEth), 0);
+  const totalSentKc = sent.reduce((sum, r) => sum + ethToKc(r.amountEth, kcPerEth), 0);
   const hasStealth = !!myName?.text_records?.["stealth-meta-address"];
 
   if (!ready) {
@@ -186,7 +186,7 @@ export function WalletView() {
               </div>
               <div className="hr-gilded" style={{ margin: "20px 0 12px" }} />
               <div className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)" }}>
-                {address && <>account · <code>{shortAddr(address)}</code></>} · {chainLabel(env.defaultChainId)} · 1 ETH ≈ {KC_PER_ETH.toLocaleString("cs-CZ")} Kč (demo rate)
+                {address && <>account · <code>{shortAddr(address)}</code></>} · {chainLabel(env.defaultChainId)} · 1 ETH ≈ {Math.round(kcPerEth).toLocaleString("cs-CZ")} Kč (live · CoinGecko)
               </div>
               {hasStealth && (
                 <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-70)", marginTop: 6, lineHeight: 1.5 }}>
@@ -227,7 +227,7 @@ export function WalletView() {
                   {[...received.map((r) => ({ r, kind: "received" as const })), ...sent.map((r) => ({ r, kind: "sent" as const }))]
                     .sort((a, b) => Number(BigInt(b.r.blockNumber) - BigInt(a.r.blockNumber)))
                     .map(({ r, kind }) => (
-                      <LedgerRow key={`${kind}:${r.txHash}`} r={r} kind={kind} />
+                      <LedgerRow key={`${kind}:${r.txHash}`} r={r} kind={kind} kcPerEth={kcPerEth} />
                     ))}
                 </div>
               )}
@@ -239,7 +239,7 @@ export function WalletView() {
   );
 }
 
-function LedgerRow({ r, kind }: { r: RawReceipt; kind: "sent" | "received" }) {
+function LedgerRow({ r, kind, kcPerEth }: { r: RawReceipt; kind: "sent" | "received"; kcPerEth: number }) {
   const counterparty = kind === "sent" ? r.recipientEns ?? shortAddr(r.stealthRecipient) : r.fromEns ?? shortAddr(r.from);
   const sigilKind = kind === "sent" ? "venus" : "caduceus";
   const sign = kind === "received" ? "+" : "−";
@@ -263,7 +263,7 @@ function LedgerRow({ r, kind }: { r: RawReceipt; kind: "sent" | "received" }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div className="t-display" style={{ fontSize: 16, color: accent, letterSpacing: "0.04em" }}>
-            {sign} {ethToKc(r.amountEth).toLocaleString("cs-CZ")} Kč
+            {sign} {ethToKc(r.amountEth, kcPerEth).toLocaleString("cs-CZ")} Kč
           </div>
           <div className="t-mono" style={{ fontSize: 10, color: "var(--ink-70)" }}>{r.amountEth} ETH</div>
         </div>

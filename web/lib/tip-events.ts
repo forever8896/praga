@@ -41,21 +41,41 @@ export async function loadTipReceipts(opts: QueryOpts = {}): Promise<TipReceipt[
     transport: http(onMainnet ? env.baseRpcUrl : env.baseSepoliaRpcUrl),
   });
 
-  // PragueConnectTip was deployed on 2026-05-08. We start from a recent block.
-  // For the demo dataset (tens of events) a single getLogs call is fine.
+  // Public Base RPCs cap eth_getLogs at 10,000 blocks per request. Walk a
+  // recent window in chunks newest-to-oldest and stop early once we have
+  // enough events. PragueConnectTip was deployed 2026-05-08; covering ~7 days
+  // (~300k blocks @ 2s) is plenty for the demo.
   const latest = await client.getBlockNumber();
-  const fromBlock = latest > BigInt(50_000) ? latest - BigInt(50_000) : BigInt(0);
+  const TOTAL_LOOKBACK = BigInt(300_000);
+  const CHUNK = BigInt(9_500); // safe under the 10k cap
+  const earliest = latest > TOTAL_LOOKBACK ? latest - TOTAL_LOOKBACK : BigInt(0);
+  const target = opts.limit ?? 100;
 
-  const logs = await client.getLogs({
-    address: tipAddress,
-    event: TIPPED_EVENT,
-    fromBlock,
-    toBlock: latest,
-    args: {
-      from: opts.from,
-      stealthRecipient: opts.recipient,
-    },
-  });
+  const allLogs: Log<bigint, number, false, typeof TIPPED_EVENT>[] = [];
+  let toBlock = latest;
+  while (toBlock > earliest && allLogs.length < target) {
+    const fromBlock = toBlock - CHUNK > earliest ? toBlock - CHUNK : earliest;
+    try {
+      const chunk = await client.getLogs({
+        address: tipAddress,
+        event: TIPPED_EVENT,
+        fromBlock,
+        toBlock,
+        args: {
+          from: opts.from,
+          stealthRecipient: opts.recipient,
+        },
+      });
+      allLogs.push(...(chunk as Log<bigint, number, false, typeof TIPPED_EVENT>[]));
+    } catch {
+      // RPC blip on this slice — keep walking; the missing window can be
+      // backfilled by a subgraph later. Better to surface what we have than
+      // 500 the whole receipts panel.
+    }
+    if (fromBlock === earliest) break;
+    toBlock = fromBlock - BigInt(1);
+  }
+  const logs = allLogs;
 
   // Reverse-resolve addresses to ENS labels (best effort) by listing all
   // pragueconnect.eth subnames once per request.

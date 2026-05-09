@@ -12,6 +12,7 @@
 // stealth-meta-address text record. No on-chain link to either name.
 import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useAccessToken } from "./use-access-token";
+import { useEthCzkRate } from "./use-eth-czk";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, WaxSeal } from "./ornaments";
@@ -70,6 +71,7 @@ const TIP_ABI = [
 export function TipForm({ recipient }: { recipient: Recipient }) {
   const { ready, authenticated, login, user } = usePrivy();
   const { accessToken: identityToken } = useAccessToken();
+  const kcPerEth = useEthCzkRate();
   const t = useT();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
@@ -363,7 +365,7 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
               style={{ width: "100%", padding: "10px 12px", background: "transparent", border: "0.5px solid var(--gilded)", fontFamily: "var(--mono)", fontSize: 18, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
             />
             <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-70)", marginTop: 4 }}>
-              {t("tip.amountHint")}
+              ≈ {Math.max(0, Math.round(Number.parseFloat(amountEth || "0") * kcPerEth)).toLocaleString("cs-CZ")} Kč {t("tip.amountHint")}
             </div>
           </div>
 
