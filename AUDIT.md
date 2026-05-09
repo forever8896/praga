@@ -4,6 +4,42 @@
 
 ---
 
+## ADDENDUM (2026-05-09, after the audit) — what changed
+
+The big finding from the audit was *the rename to pragueconnect.eth is label-only and the resolver is hosted SaaS*. Both have been fixed:
+
+- **`pragueconnect.eth` is now real on Sepolia ENS.** Registered by deployer `0x2908…9D10` on the Sepolia ETHRegistrarController (`0xfb3cE5…962F1f968`) via the standard commit-reveal flow. Registration tx: `0xcc279d1ea9200b784bb49a406ea89a1fb509e735d5416ef2477b17071e6db033`. 365-day rent paid (~0.003 ETH).
+- **Resolver is no longer NameStone.** `PragueConnectResolver.sol` deployed at `0x8519522032fb505795142ad833b6059e892eb4c1` on Sepolia. ENS Registry resolver field on the parent's namehash flipped to it (tx `0x5810f0d1…`). 8/8 contract tests pass: signature verify, expiry, signer rotation, owner-only admin, OffchainLookup revert shape.
+- **Gateway is ours.** `web/app/api/ccip/[sender]/[data]/route.ts` decodes `addr` / `addr-multicoin` / `text` / `contenthash` queries and signs responses per the ensdomains/offchain-resolver spec (keccak over `0x1900 || target || expires || keccak(request) || keccak(result)`). Signer key `0x14039D13…A795`, separate from the deployer wallet.
+- **Data is ours.** `web/data/subnames.json` holds the 11 seeded subnames (migrated from the old praga.eth records). `web/lib/resolver-store.ts` reads baseline + in-memory overlay; the legacy `lib/namestone.ts` is deleted.
+- **Verified end-to-end via ethers' built-in CCIP-Read against Sepolia.** `lucia.pragueconnect.eth → 0xAb04…4B25`, `kilian → 0xAb04…4B25`, `tomas → 0xAb04…4B25`; `text(description)` lookups also pass. The full stack — Sepolia ENS Registry → our resolver → our gateway → our store → signed response → resolver verifies → ethers decodes — is operational.
+- **CROPS censorship-resistance leg, made literal.** Every byte in the resolution path is now in this repo: contract source, gateway code, data file, signer key. NameStone API key environment variable removed from Vercel and from app code.
+
+Status of the §2 overclaims after the addendum:
+
+| Overclaim (§2) | Pre-fix | Post-fix |
+|---|---|---|
+| Rename to `pragueconnect.eth` is real | label-only, resolver = NameStone | **resolved** — registered on Sepolia, our resolver in place |
+| Dual-publish to ERC-6538 | no code | **still drop from pitch** unless ~1h add ships (SDK helper exists in node_modules) |
+| ENSIP-25 agent delegation | bare `agent-registration` key | **honest framing in §4** stays; spec mismatch is a feature, not a bug ("we shipped the prototype the spec later formalised") |
+| Semaphore ZK reputation | zero code | **drop from pitch** |
+| "No platform database" | true (NameStone hosted theirs) | **acceptable** — our store is a JSON + in-memory map; no SaaS, but be precise: *"the resolver code we run is open and self-hostable; the store is a small JSON file in this repo."* |
+| 7 vs 10 demo subnames | docs disagreed | **11 are seeded** under `pragueconnect.eth`; pick 7 for the demo script |
+
+The §3 punch list status:
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Decide canonical ENS parent | ✅ `pragueconnect.eth` registered + resolver flipped |
+| 2 | Live-test XMTP | ⏳ pending |
+| 3 | Set Swarm env on Vercel | ⏳ pending (need a Bee URL + postage batch) |
+| 4 | Submit ERC-7730 to Ledger registry | ⏳ pending |
+| 5 | Update Vercel env vars | ✅ `NAMESTONE_API_KEY` removed; `PC_RESOLVER_SIGNER_KEY` added |
+| 6 | Edit PLAN.md / README.md / project memory | ⏳ partial — this addendum is the source of truth |
+| 7 | Ship LICENSE (MIT) | ✅ at repo root |
+
+---
+
 ## TL;DR
 
 **The marketplace is real.** Both contracts are deployed and pass 19/19 tests. Stealth-address tips are live on Base Sepolia, derived via two audited SDKs, announced through ScopeLift's canonical ERC-5564 contract, and unlinkable on Basescan. Five end-to-end loops ship: claim → edit → compose → feed → tip → receipt. The site is up at https://praga-azure.vercel.app and https://pragueconnect-azure.vercel.app.
