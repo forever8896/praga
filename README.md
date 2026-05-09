@@ -311,6 +311,54 @@ If you run more than one city, the natural pattern is a hub: `connect.eth` resol
 - **Faucet drip** (`POST /api/faucet-drip`) sends ~0.005 ETH on Base Sepolia to any Privy-authenticated user whose balance is below 0.001 ETH. Rate-limited to one drip per address per 24h via KV. Requires `PC_FAUCET_KEY` env var (private key of a project-funded EOA on Base Sepolia). The tip page surfaces a "TOP ME UP" button when balance is low — sits next to the public Alchemy faucet link as a fallback.
 - Fork-and-rename in good taste: the `pragueconnect.eth` parent is owned by the project deployer for the hackathon; if you want to fork the *brand* (rather than the *city*), please pick a different parent ENS name.
 
+## Mainnet ENS registration (post-hackathon, optional)
+
+Today `pragueconnect.eth` lives on **Sepolia**, which means:
+
+- ✅ ENS resolution works from any Sepolia-aware client (verified end-to-end)
+- ❌ `<name>.pragueconnect.eth.limo` does **not** resolve in browsers — eth.limo is mainnet-only
+- ❌ Wallets/dApps querying mainnet ENS won't find our subnames
+
+To make `<name>.pragueconnect.eth.limo` resolve in the open web (and unlock the full Swarm story end-to-end), the parent name needs a mainnet registration. Cost: ~0.015 ETH (~$60–70 at May 2026 prices) — name fee + gas + resolver redeploy.
+
+The script in `contracts/script/register-mainnet.sh` automates the full dance:
+
+1. Pre-flight: balance, name availability, rent price, gas estimate, **interactive confirmation**
+2. Deploy `PragueConnectResolver` to mainnet (same code, same gateway URL)
+3. Make commitment via `ETHRegistrarController.commit()`
+4. Wait 70 seconds for the commit-reveal age window
+5. Call `register()` with the deployed resolver pre-set
+6. Verify resolver assignment on the registry
+
+```bash
+# 1. Fund 0x2908…9D10 on mainnet with ~0.015 ETH
+
+# 2. Dry-run first to see exactly what the script will do
+DEPLOYER_KEY=0x...                                                   \
+ETH_MAINNET_RPC=https://eth-mainnet.g.alchemy.com/v2/...             \
+RESOLVER_GATEWAY_URL='https://pragueconnect-azure.vercel.app/api/ccip/{sender}/{data}.json' \
+RESOLVER_SIGNER=0x...                                                \
+  bash contracts/script/register-mainnet.sh --dry-run
+
+# 3. If output looks right, run for real
+bash contracts/script/register-mainnet.sh
+# → type "yes" at the confirmation prompt
+```
+
+After the script completes:
+
+1. Update Vercel env vars: `NEXT_PUBLIC_NAMESTONE_DOMAIN=pragueconnect.eth` (already correct) and add `PRAGUECONNECT_MAINNET_RESOLVER=<address>` from script output.
+2. Redeploy.
+3. Test: `curl -sI https://kilian.pragueconnect.eth.limo` — should return 200 (after a profile is published to Swarm).
+
+The same data lives behind both Sepolia and mainnet resolvers — they both call our gateway, the gateway reads from the same KV. Migration is purely about which chain serves the resolver lookup; user data needs no change.
+
+### Failure recovery
+
+If `commit()` lands but `register()` fails (gas spike, RPC blip, etc.), the commitment is valid for 24 hours. Re-run the script with `COMMITMENT_SECRET=0x<original-secret>` to skip the commit and go straight to register with the same parameters. The script prints the secret on every run so you can save it.
+
+If the resolver deploys but registration fails entirely, set `PRAGUECONNECT_MAINNET_RESOLVER=<deployed-address>` on the next run to skip redeployment.
+
 ## Publishing profiles to Swarm (`*.eth.limo`)
 
 Each `<name>.pragueconnect.eth.limo` page can be served from **Swarm** rather than from our Vercel deployment, making the canonical profile site fully decentralized. The pipeline:
