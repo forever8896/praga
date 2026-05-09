@@ -65,6 +65,7 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
   const [claimedInviter, setClaimedInviter] = useState<ClaimedInviter | null>(null);
   const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
   const [showSealedBeat, setShowSealedBeat] = useState(false);
+  const [authDebug, setAuthDebug] = useState<string>("");
   const router = useRouter();
   const checkAbort = useRef<AbortController | null>(null);
   const inscriptionStartRef = useRef<number | null>(null);
@@ -90,7 +91,11 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
   // a page refresh after claiming would re-render the inscription input as if
   // they were a fresh visitor.
   useEffect(() => {
-    if (!authenticated || !identityToken || showSealedBeat) return;
+    setAuthDebug(`ready=${ready} auth=${authenticated} idTok=${identityToken ? "yes" : "no"}`);
+    if (!ready) return;
+    if (!authenticated) return;
+    if (showSealedBeat) return;
+    if (!identityToken) return;
     let cancelled = false;
     (async () => {
       try {
@@ -100,16 +105,22 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
         const data = await res.json();
         if (cancelled) return;
         if (res.ok && data.claimed && typeof data.ens === "string") {
+          setAuthDebug(`claimed → /${data.ens} (replacing)`);
           router.replace(`/${data.ens}`);
+        } else {
+          const summary = res.ok
+            ? `claimed=false addr=${data?.debug?.lookupAddress ?? "?"} known=${(data?.debug?.knownAddresses ?? []).length}`
+            : `${res.status} ${data?.error ?? ""} ${data?.reason ?? ""}`;
+          setAuthDebug(summary);
         }
-      } catch {
-        /* ignore — leave the form in idle state */
+      } catch (e) {
+        setAuthDebug(`fetch-error: ${e instanceof Error ? e.message : String(e)}`);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [authenticated, identityToken, router, showSealedBeat]);
+  }, [ready, authenticated, identityToken, router, showSealedBeat]);
 
   // Debounced availability check via NameStone whenever `name` changes.
   useEffect(() => {
@@ -282,6 +293,23 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
 
   return (
     <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
+      {authDebug && (
+        <div
+          style={{
+            background: "var(--vermilion-wash, #f5e8e4)",
+            border: "0.5px solid var(--vermilion)",
+            color: "var(--vermilion)",
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            padding: "6px 10px",
+            marginBottom: 12,
+            textAlign: "center",
+            wordBreak: "break-all",
+          }}
+        >
+          [auth] {authDebug}
+        </div>
+      )}
       <div style={{ marginBottom: 18, display: "flex", justifyContent: "center" }}>
         <LivePreviewParchment
           name={name}
