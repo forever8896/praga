@@ -1,5 +1,7 @@
-import { createPublicClient, http, namehash, encodeFunctionData } from 'viem';
+import { createPublicClient, http, namehash } from 'viem';
 import { sepolia } from 'viem/chains';
+
+export {};
 
 const c = createPublicClient({ chain: sepolia, transport: http('https://ethereum-sepolia-rpc.publicnode.com') });
 

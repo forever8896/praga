@@ -34,6 +34,8 @@ interface ProfileData {
   isDemoSeed: boolean;
   receiptsSent: TipReceipt[];
   receiptsReceived: TipReceipt[];
+  /** Swarm bzz reference (32-byte hex) decoded from the subname's contenthash, if any. */
+  swarmRef: string | null;
 }
 
 async function loadProfile(rawName: string): Promise<ProfileData> {
@@ -56,6 +58,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       isDemoSeed: false,
       receiptsSent: [],
       receiptsReceived: [],
+      swarmRef: null,
     };
   }
   const display = record.text_records?.name ?? label.charAt(0).toUpperCase() + label.slice(1);
@@ -77,7 +80,19 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     isDemoSeed: label === "kilian",
     receiptsSent,
     receiptsReceived,
+    swarmRef: extractSwarmRef(record.contenthash),
   };
+}
+
+/** Decode an ENSIP-7 Swarm contenthash back to its 32-byte bzz reference.
+ *  The fixed prefix is 0xe40101fa011b20 (swarm-ns / CIDv1 / swarm-manifest /
+ *  keccak256-32). Anything else returns null. */
+function extractSwarmRef(contenthash: string | null | undefined): string | null {
+  if (!contenthash) return null;
+  const hex = contenthash.startsWith("0x") ? contenthash.slice(2) : contenthash;
+  if (hex.length !== 78) return null; // 7 prefix + 32 ref = 39 bytes = 78 hex chars
+  if (!hex.toLowerCase().startsWith("e40101fa011b20")) return null;
+  return hex.slice(14);
 }
 
 export default async function ProfilePage({
@@ -99,6 +114,42 @@ export default async function ProfilePage({
         <ReciprocateCartouche profileAddress={profile.address} />
       )}
     </>
+  );
+}
+
+/** "served from Swarm" badge. Compact chip variant for the mobile chip strip;
+ *  inline variant for the desktop seal block. Both link to a public Swarm
+ *  gateway so anyone (including someone reading this on the .limo page) can
+ *  fetch the same content without trusting our app. */
+function SwarmBadge({ swarmRef, inline = false }: { swarmRef: string; inline?: boolean }) {
+  const href = `https://api.gateway.ethswarm.org/bzz/${swarmRef}/`;
+  const short = `bzz://${swarmRef.slice(0, 6)}…${swarmRef.slice(-4)}`;
+  if (inline) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="t-mono"
+        style={{ fontSize: 12, color: "var(--ink-70)", textDecoration: "none", borderBottom: "0.5px dotted var(--gilded)" }}
+        title={`Swarm reference: ${swarmRef}`}
+      >
+        Swarm · {short}
+      </a>
+    );
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="t-display"
+      style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--verdigris)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+      title={`Swarm reference: ${swarmRef}`}
+    >
+      <span style={{ width: 6, height: 6, background: "var(--verdigris)", borderRadius: "50%" }} />
+      SERVED FROM SWARM
+    </a>
   );
 }
 
@@ -184,12 +235,13 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
         <div style={{ textAlign: "center", marginTop: 8 }}>
           <PortraitRoundel size={140} />
         </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
           <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--vermilion)", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 6, height: 6, background: "var(--vermilion)", borderRadius: "50%" }} />
             VERIFIED HUMAN
           </span>
           {profile.location && <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--ink-70)" }}>· {profile.location.toUpperCase()} ·</span>}
+          {profile.swarmRef && <SwarmBadge swarmRef={profile.swarmRef} />}
         </div>
         {profile.sealedBy && (
           <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-50)", textAlign: "center", marginTop: 8, letterSpacing: "0.02em" }}>
@@ -337,6 +389,11 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
                 <Link href={`/${profile.sealedBy}`} className="t-mono" style={{ fontSize: 12, color: "var(--ink-70)", textDecoration: "none", borderBottom: "0.5px dotted var(--gilded)" }}>
                   {profile.sealedBy}
                 </Link>
+              </div>
+            )}
+            {profile.swarmRef && (
+              <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-50)", marginTop: 8 }}>
+                served from <SwarmBadge swarmRef={profile.swarmRef} inline />
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 16 }}>

@@ -311,6 +311,78 @@ If you run more than one city, the natural pattern is a hub: `connect.eth` resol
 - **Faucet drip** (`POST /api/faucet-drip`) sends ~0.005 ETH on Base Sepolia to any Privy-authenticated user whose balance is below 0.001 ETH. Rate-limited to one drip per address per 24h via KV. Requires `PC_FAUCET_KEY` env var (private key of a project-funded EOA on Base Sepolia). The tip page surfaces a "TOP ME UP" button when balance is low — sits next to the public Alchemy faucet link as a fallback.
 - Fork-and-rename in good taste: the `pragueconnect.eth` parent is owned by the project deployer for the hackathon; if you want to fork the *brand* (rather than the *city*), please pick a different parent ENS name.
 
+## Publishing profiles to Swarm (`*.eth.limo`)
+
+Each `<name>.pragueconnect.eth.limo` page can be served from **Swarm** rather than from our Vercel deployment, making the canonical profile site fully decentralized. The pipeline:
+
+1. User saves their profile in `/me/edit` → resolver-store writes the text records to KV.
+2. `/api/publish-site` renders a self-contained HTML page (`web/lib/swarm.ts:renderProfileHtml`) — inline CSS, inline SVGs, no external assets.
+3. The page is uploaded to a Bee node via `POST {SWARM_BEE_URL}/bzz` with the configured postage batch as the stamp.
+4. Bee returns a 32-byte content reference. We encode it as an ENSIP-7 contenthash with the Swarm prefix `0xe40101fa011b20` (swarm-ns / CIDv1 / swarm-manifest / keccak256-32) and write it to the subname's `contenthash` field.
+5. When anyone resolves `<name>.pragueconnect.eth.limo`, the eth.limo gateway reads the contenthash via our CCIP-Read gateway, decodes the Swarm codec, and proxies to a public Swarm gateway (`api.gateway.ethswarm.org`).
+
+Profile pages render a **"served from Swarm" badge** when a `swarmRef` is present, linking to the public bzz gateway so anyone can verify the same content without trusting our app.
+
+### Setup (one-time, ~10 min)
+
+**Run a Bee node.** The simplest path is the [Swarm Desktop app](https://www.ethswarm.org/build/desktop) — it bundles a Bee node with a dashboard. Default API endpoint: `http://localhost:1633`.
+
+```bash
+# verify your local Bee is up
+SWARM_BEE_URL=http://localhost:1633 bun web/scripts/swarm-status.ts
+# → /health: { status: "ok", version: "..." }
+# → N postage batches: ...
+```
+
+**Acquire a postage batch.** In Swarm Desktop's Stamps tab, buy a batch (or accept a hackathon mentor's gift code). Note the batch ID — it's a `0x...` hex string. Set it as `SWARM_POSTAGE_BATCH_ID`.
+
+**Smoke-test the upload pipeline locally:**
+
+```bash
+SWARM_BEE_URL=http://localhost:1633 \
+SWARM_POSTAGE_BATCH_ID=0x...  \
+  bun web/scripts/swarm-publish.ts ales
+# → reference: 8c4e...
+# → contenthash: 0xe40101fa011b20...
+# → bzz://...  (and api.gateway.ethswarm.org/bzz/... URL)
+```
+
+**Make the Bee node reachable from Vercel.** Vercel's serverless functions can't reach `http://localhost:1633` — you need a public URL.
+
+The simplest hackathon solution is a tunnel:
+
+```bash
+# in one terminal
+ngrok http 1633
+# → forwarding to https://abc123.ngrok.app
+
+# set in Vercel env:
+SWARM_BEE_URL=https://abc123.ngrok.app
+SWARM_POSTAGE_BATCH_ID=0x...
+```
+
+For production you'd run Bee on a small cloud VM with a public IP. For demo, an ngrok tunnel running on a laptop is fine.
+
+**Test the round-trip:** edit your profile in `/me/edit`, save, watch the "PUBLISH TO SWARM" indicator turn into a `bzz ↗` link, and visit `<name>.pragueconnect.eth.limo` — the rendered page should now be served from Swarm.
+
+### What `/api/publish-site` does
+
+| Step | Code | Output |
+|---|---|---|
+| Authenticate caller | `verifySession(req)` (Privy bearer) | wallet address |
+| Confirm caller owns the subname | `getSubname(...).address === caller` | 403 if mismatch |
+| Render HTML | `renderProfileHtml(record)` | ~10–30 KB |
+| Upload to Bee | `POST {SWARM_BEE_URL}/bzz` w/ `Swarm-Postage-Batch-Id` | 32-byte ref |
+| Encode contenthash | `bzzToContenthash(ref)` | `0xe40101fa011b20<ref>` |
+| Persist | `setSubname({contenthash, ...})` (KV + memory) | ENS resolution returns Swarm hash |
+
+### Failure modes
+
+- **`swarm-not-configured`** (503) — env vars unset; the route is deliberately disabled rather than silently returning the Vercel-served page.
+- **`bee 502 / 504`** — node unreachable. Restart Swarm Desktop or check the ngrok tunnel.
+- **Postage batch expired** — Bee returns an error referencing the stamp. Buy or top up the batch.
+- **Bee node not synced** — node accepts the upload but the gateway returns 404 for ~minutes while Swarm propagates the chunks. Try again in 1–2 minutes.
+
 ## Public-testing checklist
 
 Before handing the URL to testers:
