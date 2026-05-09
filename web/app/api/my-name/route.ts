@@ -20,7 +20,19 @@ export async function GET(req: Request) {
       (r) => r.address.toLowerCase() === session.address!.toLowerCase(),
     );
     if (!mine) {
-      return NextResponse.json({ ok: true, claimed: false });
+      // Diagnostic: surface the address we looked up + the addresses we saw,
+      // so a refresh-after-claim mismatch can be spotted client-side.
+      return NextResponse.json({
+        ok: true,
+        claimed: false,
+        debug: {
+          lookupAddress: session.address,
+          knownAddresses: all.map((r) => ({
+            ens: `${r.name}.${r.domain}`,
+            address: r.address,
+          })),
+        },
+      });
     }
 
     // If the user was inscribed under an inviter, surface the inviter's public
