@@ -32,7 +32,7 @@ function OnboardingScreen() {
             width={300}
             height={200}
             priority
-            style={{ height: 56, width: "auto", display: "block" }}
+            style={{ height: 84, width: "auto", display: "block" }}
           />
         </div>
         <div className="italic" style={{ fontSize: 13, color: "var(--ink-50)", marginBottom: 14 }}>
