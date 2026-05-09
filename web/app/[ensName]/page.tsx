@@ -8,7 +8,7 @@ import {
   ProfileHeader,
   ProfileSkillsCatalogue,
 } from "@/lib/profile-shared";
-import { getSubname } from "@/lib/namestone";
+import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
 import { decodeOffers } from "@/lib/offers";

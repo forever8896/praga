@@ -1,7 +1,7 @@
-// POST /api/claim-name — issues a `<name>.pragueconnect.eth` subname via NameStone.
-// Server-only because the NameStone API key must not leak to the browser.
+// POST /api/claim-name — issues a `<name>.pragueconnect.eth` subname through
+// PragueConnect's own resolver store (no third-party SaaS in the path).
 import { NextResponse } from "next/server";
-import { getSubname, setSubname } from "@/lib/namestone";
+import { getSubname, setSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -13,10 +13,6 @@ interface Body {
 }
 
 export async function POST(req: Request) {
-  if (!process.env.NAMESTONE_API_KEY) {
-    return NextResponse.json({ error: "namestone-not-configured" }, { status: 500 });
-  }
-
   let body: Body;
   try {
     body = await req.json();
@@ -65,19 +61,16 @@ export async function POST(req: Request) {
       url: `https://pragueconnect-azure.vercel.app/${name}.pragueconnect.eth`,
     };
     if (sealedBy) text_records["sealed-by"] = sealedBy;
-    await setSubname(
-      {
-        domain: env.namestoneDomain,
-        name,
-        address: address as `0x${string}`,
-        text_records,
-      },
-      process.env.NAMESTONE_API_KEY,
-    );
+    await setSubname({
+      domain: env.namestoneDomain,
+      name,
+      address: address as `0x${string}`,
+      text_records,
+    });
     return NextResponse.json({ ok: true, ens: `${name}.pragueconnect.eth`, sealedBy });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "namestone-failed" },
+      { error: e instanceof Error ? e.message : "resolver-failed" },
       { status: 502 },
     );
   }

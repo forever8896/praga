@@ -14,7 +14,7 @@
 //   0x01   — CIDv1
 //   0xfa01 — swarm-manifest codec
 //   0x1b20 — multihash header: keccak256 (0x1b), 32 bytes (0x20)
-import type { NameStoneRecord } from "./namestone";
+import type { NameStoneRecord } from "./resolver";
 import { CROPS_SEAL_SVG } from "./ornaments";
 
 const SWARM_CONTENTHASH_PREFIX = "e40101fa011b20";

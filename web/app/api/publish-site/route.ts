@@ -2,7 +2,7 @@
 // Swarm via Bee, write the bzz reference back as the subname's contenthash.
 // After this, `<name>.pragueconnect.eth.limo` resolves to the Swarm-hosted page.
 import { NextResponse } from "next/server";
-import { getSubname, setSubname, type NameStoneRecord } from "@/lib/namestone";
+import { getSubname, setSubname, type NameStoneRecord } from "@/lib/resolver";
 import { verifySession } from "@/lib/privy-server";
 import { env } from "@/lib/env";
 import { isSwarmConfigured, renderProfileHtml, uploadHtmlToSwarm } from "@/lib/swarm";
@@ -11,9 +11,6 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  if (!process.env.NAMESTONE_API_KEY) {
-    return NextResponse.json({ error: "namestone-not-configured" }, { status: 500 });
-  }
   if (!isSwarmConfigured()) {
     return NextResponse.json({ error: "swarm-not-configured" }, { status: 503 });
   }
@@ -44,16 +41,13 @@ export async function POST(req: Request) {
   try {
     const html = renderProfileHtml(record as NameStoneRecord);
     const { reference, contenthash } = await uploadHtmlToSwarm(html);
-    await setSubname(
-      {
-        domain: env.namestoneDomain,
-        name: label,
-        address: record.address,
-        text_records: record.text_records,
-        contenthash,
-      },
-      process.env.NAMESTONE_API_KEY,
-    );
+    await setSubname({
+      domain: env.namestoneDomain,
+      name: label,
+      address: record.address,
+      text_records: record.text_records,
+      contenthash,
+    });
     return NextResponse.json({
       ok: true,
       reference,

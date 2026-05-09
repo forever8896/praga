@@ -1,0 +1,138 @@
+[
+  {
+    "name": "ales",
+    "domain": "pragueconnect.eth",
+    "address": "0x2908209845Edd4B526B9F26E3b3bba73E9A59D10",
+    "text_records": {
+      "location": "Praha",
+      "name": "Ales"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "bohuslav",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "name": "Bohuslav K.",
+      "description": "Cook from Karl\u00edn \u2014 Sunday dinners delivered hand to hand.",
+      "location": "Karl\u00edn",
+      "offers": "[{\"id\":\"o1\",\"kind\":\"sulphur\",\"type\":\"OFFER\",\"title\":\"Sunday sv\u00ed\u010dkov\u00e1, two portions, hand-delivered.\",\"kc\":280,\"usdc\":10,\"location\":\"Karl\u00edn\",\"posted_at\":1778281009}]"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "brianpistar",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "name": "Brianpistar",
+      "location": "Praha",
+      "url": "https://praga-azure.vercel.app/brianpistar.praga.eth"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "jan",
+    "domain": "pragueconnect.eth",
+    "address": "0x2908209845Edd4B526B9F26E3b3bba73E9A59D10",
+    "text_records": {
+      "name": "Jan",
+      "location": "Praha"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "jirka",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "description": "Patient with paperwork so you don't have to be.",
+      "offers": "[{\"id\":\"o1\",\"kind\":\"alembic\",\"type\":\"OFFER\",\"title\":\"I'll wait at the foreign-police office for you.\",\"kc\":200,\"usdc\":7,\"location\":\"\u017di\u017ekov\",\"posted_at\":1778281009}]",
+      "name": "Ji\u0159\u00ed M.",
+      "location": "\u017di\u017ekov"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "kilian",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "name": "Kilian P.",
+      "location": "\u017di\u017ekov",
+      "description": "Born in Karlovy Vary, transplanted to \u017di\u017ekov ten winters ago. I keep a small workshop above a butcher's on Kr\u00e1sova where I sharpen knives, fix bicycles, and occasionally repair an old radio. The wax seal below this letter is my hand on the work.",
+      "offers": "[{\"id\":\"o1\",\"kind\":\"forge\",\"type\":\"OFFER\",\"title\":\"I will fix your bicycle by sundown.\",\"detail\":\"Bring it past the church on Kr\u00e1sova; door is the green one.\",\"kc\":350,\"usdc\":12,\"location\":\"\u017di\u017ekov\",\"posted_at\":1778281009}]"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "lucia",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "description": "I trade Czech for English over coffee. Patience for grammar, no patience for bad espresso.",
+      "name": "Lucia B.",
+      "location": "Vinohrady",
+      "offers": "[{\"id\":\"o1\",\"kind\":\"mercury\",\"type\":\"OFFER\",\"title\":\"Czech \u2194 English, an hour over coffee.\",\"kc\":450,\"usdc\":16,\"location\":\"Vinohrady\",\"posted_at\":1778281009}]"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "milena",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "name": "Milena S.",
+      "location": "Hole\u0161ovice",
+      "description": "Looking for a ride. I'll leave good coffee on the dashboard.",
+      "offers": "[{\"id\":\"o1\",\"kind\":\"caduceus\",\"type\":\"REQUEST\",\"title\":\"Ride to the airport, 6am Tuesday.\",\"kc\":600,\"usdc\":22,\"location\":\"Hole\u0161ovice\",\"posted_at\":1778281009}]"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "pavla",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "name": "Pavla N.",
+      "description": "Moving in two weeks. The piano needs a new home.",
+      "location": "Vinohrady",
+      "offers": "[{\"id\":\"o1\",\"kind\":\"venus\",\"type\":\"GIFT\",\"title\":\"Free piano \u2014 pick it up Saturday morning.\",\"kc\":0,\"usdc\":0,\"location\":\"Vinohrady\",\"posted_at\":1778281009}]"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "radek",
+    "domain": "pragueconnect.eth",
+    "address": "0x2908209845Edd4B526B9F26E3b3bba73E9A59D10",
+    "text_records": {
+      "location": "Praha",
+      "name": "Radek"
+    },
+    "coin_types": {},
+    "contenthash": null
+  },
+  {
+    "name": "tomas",
+    "domain": "pragueconnect.eth",
+    "address": "0xAb04088c1D24641C34F6BcEE8103053D84194B25",
+    "text_records": {
+      "name": "Tom\u00e1\u0161 H.",
+      "location": "Sm\u00edchov",
+      "description": "Mathematician by day, tutor by appointment.",
+      "offers": "[{\"id\":\"o1\",\"kind\":\"saturn\",\"type\":\"OFFER\",\"title\":\"Mathematics for your gymn\u00e1zium child, weekly.\",\"kc\":550,\"usdc\":20,\"location\":\"Sm\u00edchov\",\"posted_at\":1778281009}]"
+    },
+    "coin_types": {},
+    "contenthash": null
+  }
+]

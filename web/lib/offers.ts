@@ -2,7 +2,7 @@
 // text record: a JSON array of Offer objects. The feed flattens all subnames
 // into a single sorted list. No platform DB.
 import type { SigilKind } from "./ornaments";
-import { listSubnames } from "./namestone";
+import { listSubnames } from "./resolver";
 import { env } from "./env";
 
 export type OfferType = "OFFER" | "REQUEST" | "GIFT";

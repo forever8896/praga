@@ -2,7 +2,7 @@
 // threadId is the recipient's pragueconnect.eth label (e.g., "kilian"). Server
 // resolves it to an address; client opens the DM.
 import { ThreadView } from "@/lib/thread-view";
-import { getSubname } from "@/lib/namestone";
+import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";

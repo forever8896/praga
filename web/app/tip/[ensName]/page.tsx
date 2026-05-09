@@ -2,7 +2,7 @@
 // NameStone, derives a fresh stealth address client-side, and calls PragueConnectTip
 // to atomically transfer + announce on Base Sepolia.
 import { TipForm } from "@/lib/tip-form";
-import { getSubname } from "@/lib/namestone";
+import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";

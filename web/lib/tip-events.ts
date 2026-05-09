@@ -3,7 +3,7 @@
 import { createPublicClient, http, parseAbiItem, type Log } from "viem";
 import { baseSepolia } from "viem/chains";
 import { env } from "./env";
-import { listSubnames, type NameStoneRecord } from "./namestone";
+import { listSubnames, type NameStoneRecord } from "./resolver";
 
 export interface TipReceipt {
   txHash: `0x${string}`;

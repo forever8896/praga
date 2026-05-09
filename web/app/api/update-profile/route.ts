@@ -2,7 +2,7 @@
 // Authenticated via Privy access token. Caller can only edit a subname whose
 // `address` field on NameStone matches their verified wallet.
 import { NextResponse } from "next/server";
-import { getSubname, setSubname } from "@/lib/namestone";
+import { getSubname, setSubname } from "@/lib/resolver";
 import { verifySession } from "@/lib/privy-server";
 import { env } from "@/lib/env";
 
@@ -28,10 +28,6 @@ const ALLOWED_FIELDS = new Set([
 ]);
 
 export async function POST(req: Request) {
-  if (!process.env.NAMESTONE_API_KEY) {
-    return NextResponse.json({ error: "namestone-not-configured" }, { status: 500 });
-  }
-
   const session = await verifySession(req);
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -70,19 +66,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    await setSubname(
-      {
-        domain: env.namestoneDomain,
-        name: label,
-        address: record.address,
-        text_records: merged,
-      },
-      process.env.NAMESTONE_API_KEY,
-    );
-    return NextResponse.json({ ok: true, ens: `${label}.pragueconnect.eth` });
+    await setSubname({
+      domain: env.namestoneDomain,
+      name: label,
+      address: record.address,
+      text_records: merged,
+    });
+    return NextResponse.json({ ok: true, ens: `${label}.${env.namestoneDomain}` });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "namestone-failed" },
+      { error: e instanceof Error ? e.message : "resolver-failed" },
       { status: 502 },
     );
   }

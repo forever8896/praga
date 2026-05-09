@@ -6,8 +6,10 @@ export const env = {
   pimlicoApiKey: process.env.NEXT_PUBLIC_PIMLICO_API_KEY ?? "",
   baseRpcUrl: process.env.NEXT_PUBLIC_BASE_RPC_URL ?? "https://mainnet.base.org",
   baseSepoliaRpcUrl: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org",
-  namestoneApiKey: process.env.NAMESTONE_API_KEY ?? "", // server-side only
-  namestoneDomain: process.env.NEXT_PUBLIC_NAMESTONE_DOMAIN ?? "skol.eth",
+  // Resolver signer key — used by /api/ccip to sign CCIP-Read responses for
+  // PragueConnectResolver. Server-only.
+  resolverSignerKey: process.env.PC_RESOLVER_SIGNER_KEY ?? "",
+  namestoneDomain: process.env.NEXT_PUBLIC_NAMESTONE_DOMAIN ?? "pragueconnect.eth",
   // ScopeLift canonical contracts — same address on every supported L2
   // https://github.com/ScopeLift/stealth-address-erc-contracts
   erc5564Announcer: "0x55649E01B5Df198D18D95b5cc5051630cfD45564",

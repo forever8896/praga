@@ -1,7 +1,7 @@
 // GET /api/check-name?name=<label> — is this `<label>.pragueconnect.eth` already taken?
 // Public endpoint, no auth required (NameStone read is public).
 import { NextResponse } from "next/server";
-import { getSubname } from "@/lib/namestone";
+import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
