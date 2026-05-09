@@ -104,6 +104,18 @@ a { color: inherit; text-decoration: none; }
 .page-castle {
   position: relative;
   background-color: #2a0a07; /* fallback while the photo loads */
+  /* Re-tint the ink-token family to white inside the castle. Inline
+   * style={{ color: "var(--ink)" }} on the home page (page.tsx) wins
+   * specificity over our color rules — but redefining the variable
+   * here means anything that resolves through var(--ink*) inherits the
+   * white scheme automatically, no JSX touch needed. */
+  --ink: #ffffff;
+  --ink-90: rgba(255, 255, 255, 0.92);
+  --ink-70: rgba(255, 255, 255, 0.85);
+  --ink-50: rgba(255, 255, 255, 0.7);
+  --ink-30: rgba(255, 255, 255, 0.45);
+  --ink-15: rgba(255, 255, 255, 0.25);
+  --ink-08: rgba(255, 255, 255, 0.15);
   background-image:
     /* radial vignette pulls the corners into shadow so the headline
      * always sits in the darker centre regardless of crop */
@@ -155,6 +167,22 @@ a { color: inherit; text-decoration: none; }
 .page-castle .container-tight > .italic,
 .page-castle .container-tight > div > .italic {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* Cartouches sitting on the velvet (LivePreviewParchment, .cartouche,
+ * .cartouche-parchment) have a parchment fill — anything inside them
+ * needs the original dark-ink token family so the input text and labels
+ * stay legible against the warm beige. Reset the tokens back here. */
+.page-castle .cartouche,
+.page-castle .cartouche-parchment,
+.page-castle .cartouche-vermilion {
+  --ink: #1F1A12;
+  --ink-90: rgba(31, 26, 18, 0.90);
+  --ink-70: rgba(31, 26, 18, 0.70);
+  --ink-50: rgba(31, 26, 18, 0.50);
+  --ink-30: rgba(31, 26, 18, 0.30);
+  --ink-15: rgba(31, 26, 18, 0.15);
+  --ink-08: rgba(31, 26, 18, 0.08);
 }
 
 /* ============== Type primitives ============== */
