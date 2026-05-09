@@ -15,6 +15,7 @@
 //   0xfa01 — swarm-manifest codec
 //   0x1b20 — multihash header: keccak256 (0x1b), 32 bytes (0x20)
 import type { NameStoneRecord } from "./namestone";
+import { CROPS_SEAL_SVG } from "./ornaments";
 
 const SWARM_CONTENTHASH_PREFIX = "e40101fa011b20";
 
@@ -75,6 +76,7 @@ export function renderProfileHtml(record: NameStoneRecord): string {
   const bio = escapeHtml(tr.description ?? "");
   const location = escapeHtml(tr.location ?? "Praha");
   const stealth = tr["stealth-meta-address"] ?? "";
+  const sealedBy = tr["sealed-by"] ?? "";
   const skills = parseSkills(tr.skills);
   const offers = parseOffers(tr.offers);
   const hasStealth = stealth.startsWith("st:eth:");
@@ -186,6 +188,11 @@ export function renderProfileHtml(record: NameStoneRecord): string {
     <p class="italic ink70" style="margin: 8px 0">this site is sealed by PragueConnect · the name belongs to the human</p>
     <div class="muted" style="margin-top: 8px">${ens} · ${record.address.slice(0, 6)}…${record.address.slice(-4)}</div>
     ${
+      sealedBy
+        ? `<p class="italic ink70" style="margin-top:10px; font-size:13px">sealed by <a href="https://pragueconnect-azure.vercel.app/${escapeHtml(sealedBy)}" style="font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ink-70); text-decoration:none; border-bottom:0.5px dotted var(--gilded)">${escapeHtml(sealedBy)}</a></p>`
+        : ""
+    }
+    ${
       hasStealth
         ? `<p class="italic ink70" style="margin-top:14px; font-size:13px">A private-gift route is sealed under this name — gifts can be sent without revealing the address they land at.</p>`
         : ""
@@ -193,6 +200,23 @@ export function renderProfileHtml(record: NameStoneRecord): string {
   </div>
 
   <p class="muted center" style="margin-top: 24px">served from Swarm · resolved via ENS · <a href="https://pragueconnect-azure.vercel.app/${ens}">interactive view ↗</a></p>
+
+  <!-- inheritance pull-tab — visible to anyone who isn't this site's owner -->
+  <div style="position: sticky; bottom: 12px; margin-top: 36px; display:flex; justify-content:center;">
+    <div style="background: var(--bone); border: 0.5px solid var(--gilded); padding: 14px 16px; display:flex; align-items:center; gap:12px; max-width: 540px; width: 100%; box-shadow: 0 -10px 24px -10px rgba(31,26,18,0.18)">
+      <svg width="22" height="22" viewBox="0 0 40 40" fill="none" stroke="#B79F4E" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 4 C 20 12, 20 22, 20 28"/><path d="M20 4 C 18.5 6, 18.5 8, 20 9 C 21.5 8, 21.5 6, 20 4 Z"/><path d="M20 14 C 14 14, 9 18, 8 24 C 7 28, 10 30, 13 28 C 15.5 26.5, 17 22, 20 20"/><path d="M20 14 C 26 14, 31 18, 32 24 C 33 28, 30 30, 27 28 C 24.5 26.5, 23 22, 20 20"/><path d="M11 22 C 15 21, 25 21, 29 22"/><path d="M14 28 C 16 30, 24 30, 26 28"/></svg>
+      <div style="flex:1; min-width:0">
+        <div style="font-family: 'Cormorant Garamond', serif; font-size: 10px; letter-spacing: 0.35em; color: var(--vermilion); text-transform: uppercase">AN INVITATION</div>
+        <div style="font-style: italic; font-size: 14px; line-height: 1.45; color: var(--ink); margin-top: 2px">You were led to this seal by <strong style="font-style:normal">${escapeHtml(display.split(" ")[0])}</strong>.</div>
+      </div>
+      <a href="https://pragueconnect-azure.vercel.app/?invitedBy=${encodeURIComponent(record.name)}" style="flex:0 0 auto; padding: 10px 14px; background: var(--ink); color: var(--parchment); font-family: 'Cormorant Garamond', serif; font-size: 10px; letter-spacing: 0.3em; text-decoration: none; white-space: nowrap">INSCRIBE MY NAME</a>
+    </div>
+  </div>
+
+  <div style="margin-top: 36px; padding-top: 20px; border-top: 0.5px solid var(--gilded); display:flex; justify-content:center; align-items:center; gap:12px;">
+    <a href="https://pragueconnect-azure.vercel.app/crops" style="line-height:0; display:inline-flex" aria-label="censorship-resistant · open-source · private · secure">${CROPS_SEAL_SVG(28)}</a>
+    <span class="italic ink70" style="font-size:12px; letter-spacing:0.04em">sealed by your own hand · forkable · MIT</span>
+  </div>
 </div>
 </body>
 </html>`;

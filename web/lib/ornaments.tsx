@@ -547,6 +547,119 @@ export function Marginalia({
   );
 }
 
+// ============== CropsSeal ==============
+// Project hallmark — four lobes around a central fleur-de-lis. Each lobe holds
+// an engraved glyph for one CROPS property (Censorship-resistant · Open-source ·
+// Private · Secure). The letters themselves are not shown; the glyphs do the work.
+// Used in every page footer, embedded in *.eth.limo static HTML, and at 96px as
+// the closing demo frame.
+export function CropsSeal({
+  size = 32,
+  color = "var(--gilded)",
+  style = {},
+  title = "censorship-resistant · open-source · private · secure",
+}: {
+  size?: number;
+  color?: string;
+  style?: CSSProperties;
+  title?: string;
+}) {
+  // Stroke widths scale slightly with size so 24px doesn't look fragile and 96px doesn't look fat.
+  const sw = size <= 28 ? 0.7 : size <= 48 ? 0.55 : 0.45;
+  const innerSw = sw * 0.85;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      style={{ display: "block", ...style }}
+      role="img"
+      aria-label={title}
+    >
+      <title>{title}</title>
+      <g stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {/* Outer hairline ring */}
+        <circle cx="50" cy="50" r="44" />
+        {/* Inner ring (lighter) */}
+        <circle cx="50" cy="50" r="34" opacity="0.55" />
+        {/* Four lobes — small petal-like protrusions at the cardinal points, sitting on the outer ring */}
+        <path d="M 50 6 C 47 9, 47 12, 50 14 C 53 12, 53 9, 50 6 Z" />
+        <path d="M 94 50 C 91 47, 88 47, 86 50 C 88 53, 91 53, 94 50 Z" />
+        <path d="M 50 94 C 47 91, 47 88, 50 86 C 53 88, 53 91, 50 94 Z" />
+        <path d="M 6 50 C 9 47, 12 47, 14 50 C 12 53, 9 53, 6 50 Z" />
+
+        {/* Glyphs in each lobe quadrant — small, just inside the inner ring at 12/3/6/9 o'clock */}
+        {/* TOP — broken chain (censorship-resistant) */}
+        <g transform="translate(50,22)">
+          <ellipse cx="-3.5" cy="0" rx="3" ry="2" />
+          <ellipse cx="3.5" cy="0" rx="3" ry="2" opacity="0.5" />
+          <line x1="-1" y1="-2.5" x2="1" y2="2.5" strokeWidth={innerSw * 1.5} />
+        </g>
+
+        {/* RIGHT — unfolded scroll (open-source) */}
+        <g transform="translate(78,50)">
+          <rect x="-5" y="-4" width="10" height="8" rx="0.6" />
+          <line x1="-5" y1="-1.5" x2="5" y2="-1.5" opacity="0.55" />
+          <line x1="-5" y1="0.5" x2="5" y2="0.5" opacity="0.55" />
+          <line x1="-5" y1="2.5" x2="5" y2="2.5" opacity="0.55" />
+        </g>
+
+        {/* BOTTOM — sealed envelope (private) */}
+        <g transform="translate(50,78)">
+          <rect x="-5" y="-3" width="10" height="6" />
+          <path d="M -5 -3 L 0 1 L 5 -3" />
+          <circle cx="0" cy="2" r="1.1" fill={color} stroke="none" />
+        </g>
+
+        {/* LEFT — key (secure) */}
+        <g transform="translate(22,50)">
+          <circle cx="-2.2" cy="0" r="2.4" />
+          <line x1="0.2" y1="0" x2="5" y2="0" />
+          <line x1="3" y1="0" x2="3" y2="2" />
+          <line x1="4.5" y1="0" x2="4.5" y2="1.5" />
+        </g>
+
+        {/* Central fleur-de-lis — smaller variant of FleurDeLis paths */}
+        <g transform="translate(50,50)">
+          <path d="M 0 -10 C 0 -5, 0 4, 0 8" strokeWidth={innerSw * 1.2} />
+          <path d="M 0 -10 C -1.5 -8, -1.5 -6, 0 -5 C 1.5 -6, 1.5 -8, 0 -10 Z" strokeWidth={innerSw * 1.2} />
+          <path d="M 0 -3 C -5 -3, -8 0, -9 4 C -9.5 7, -7.5 8, -5.5 6.5 C -3.5 5.5, -2 2, 0 1" strokeWidth={innerSw * 1.2} />
+          <path d="M 0 -3 C 5 -3, 8 0, 9 4 C 9.5 7, 7.5 8, 5.5 6.5 C 3.5 5.5, 2 2, 0 1" strokeWidth={innerSw * 1.2} />
+          <path d="M -7 1 C -3 0, 3 0, 7 1" strokeWidth={innerSw} />
+          <path d="M -5 6 C -3 8, 3 8, 5 6" strokeWidth={innerSw} />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+// CropsSeal as a static HTML string — used by lib/swarm.ts so *.eth.limo profiles
+// carry the same hallmark. Pure SVG, no React.
+export const CROPS_SEAL_SVG = (size = 28, color = "#B79F4E"): string => `
+<svg width="${size}" height="${size}" viewBox="0 0 100 100" role="img" aria-label="censorship-resistant · open-source · private · secure" style="display:block">
+  <title>censorship-resistant · open-source · private · secure</title>
+  <g stroke="${color}" stroke-width="0.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="50" r="44"/>
+    <circle cx="50" cy="50" r="34" opacity="0.55"/>
+    <path d="M 50 6 C 47 9, 47 12, 50 14 C 53 12, 53 9, 50 6 Z"/>
+    <path d="M 94 50 C 91 47, 88 47, 86 50 C 88 53, 91 53, 94 50 Z"/>
+    <path d="M 50 94 C 47 91, 47 88, 50 86 C 53 88, 53 91, 50 94 Z"/>
+    <path d="M 6 50 C 9 47, 12 47, 14 50 C 12 53, 9 53, 6 50 Z"/>
+    <g transform="translate(50,22)"><ellipse cx="-3.5" cy="0" rx="3" ry="2"/><ellipse cx="3.5" cy="0" rx="3" ry="2" opacity="0.5"/><line x1="-1" y1="-2.5" x2="1" y2="2.5" stroke-width="0.9"/></g>
+    <g transform="translate(78,50)"><rect x="-5" y="-4" width="10" height="8" rx="0.6"/><line x1="-5" y1="-1.5" x2="5" y2="-1.5" opacity="0.55"/><line x1="-5" y1="0.5" x2="5" y2="0.5" opacity="0.55"/><line x1="-5" y1="2.5" x2="5" y2="2.5" opacity="0.55"/></g>
+    <g transform="translate(50,78)"><rect x="-5" y="-3" width="10" height="6"/><path d="M -5 -3 L 0 1 L 5 -3"/><circle cx="0" cy="2" r="1.1" fill="${color}" stroke="none"/></g>
+    <g transform="translate(22,50)"><circle cx="-2.2" cy="0" r="2.4"/><line x1="0.2" y1="0" x2="5" y2="0"/><line x1="3" y1="0" x2="3" y2="2"/><line x1="4.5" y1="0" x2="4.5" y2="1.5"/></g>
+    <g transform="translate(50,50)">
+      <path d="M 0 -10 C 0 -5, 0 4, 0 8" stroke-width="0.7"/>
+      <path d="M 0 -10 C -1.5 -8, -1.5 -6, 0 -5 C 1.5 -6, 1.5 -8, 0 -10 Z" stroke-width="0.7"/>
+      <path d="M 0 -3 C -5 -3, -8 0, -9 4 C -9.5 7, -7.5 8, -5.5 6.5 C -3.5 5.5, -2 2, 0 1" stroke-width="0.7"/>
+      <path d="M 0 -3 C 5 -3, 8 0, 9 4 C 9.5 7, 7.5 8, 5.5 6.5 C 3.5 5.5, 2 2, 0 1" stroke-width="0.7"/>
+      <path d="M -7 1 C -3 0, 3 0, 7 1" stroke-width="0.5"/>
+      <path d="M -5 6 C -3 8, 3 8, 5 6" stroke-width="0.5"/>
+    </g>
+  </g>
+</svg>`;
+
 // ============== Quill ==============
 export function Quill({ size = 16, color = "var(--gilded)" }: { size?: number; color?: string }) {
   return (

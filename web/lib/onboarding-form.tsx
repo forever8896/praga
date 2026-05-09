@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FleurDeLis } from "./ornaments";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
+import { readInviter, clearInviter } from "./inheritance-tab";
 import { useT } from "./i18n";
 
 type ClaimState =
@@ -81,11 +82,12 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
     }
 
     setClaimState("claiming");
+    const invitedBy = readInviter();
     try {
       const res = await fetch("/api/claim-name", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address: claimAddress }),
+        body: JSON.stringify({ name, address: claimAddress, invitedBy }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -98,6 +100,9 @@ export function OnboardingForm({ size }: { size: "mobile" | "desktop" }) {
         return;
       }
       setClaimState("claimed");
+      // Inviter has been recorded server-side; clear from localStorage so the
+      // signal doesn't persist across future claims on this device.
+      clearInviter();
 
       // Auto-generate the stealth gift route. If the user cancels the second
       // signature we still complete the flow — they can seal it later from

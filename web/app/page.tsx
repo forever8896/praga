@@ -3,6 +3,7 @@
 "use client";
 import { Cartouche, FleurDeLis } from "@/lib/ornaments";
 import { OnboardingForm } from "@/lib/onboarding-form";
+import { InviterCapture } from "@/lib/inheritance-tab";
 import { useT } from "@/lib/i18n";
 
 function PragueSilhouette({ opacity = 0.18 }: { opacity?: number }) {
@@ -146,6 +147,7 @@ function DesktopOnboarding() {
 export default function OnboardingPage() {
   return (
     <>
+      <InviterCapture />
       <MobileOnboarding />
       <DesktopOnboarding />
     </>

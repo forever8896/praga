@@ -18,6 +18,21 @@
             { "name": "memo", "type": "string" }
           ],
           "outputs": []
+        },
+        {
+          "type": "function",
+          "name": "tipWithReferral",
+          "stateMutability": "payable",
+          "inputs": [
+            { "name": "recipientStealth", "type": "address" },
+            { "name": "recipientEphPubKey", "type": "bytes" },
+            { "name": "recipientViewTag", "type": "bytes1" },
+            { "name": "inviterStealth", "type": "address" },
+            { "name": "inviterEphPubKey", "type": "bytes" },
+            { "name": "inviterViewTag", "type": "bytes1" },
+            { "name": "memo", "type": "string" }
+          ],
+          "outputs": []
         }
       ]
     }
@@ -58,6 +73,36 @@
         ],
         "required": ["stealthRecipient", "$.tx.value"],
         "excluded": ["ephemeralPubKey", "viewTag"]
+      },
+      "tipWithReferral(address,bytes,bytes1,address,bytes,bytes1,string)": {
+        "intent": "Send a sealed gift with a finder's mark",
+        "fields": [
+          {
+            "path": "recipientStealth",
+            "label": "Sealed delivery — recipient",
+            "format": "addressName",
+            "params": { "types": ["wallet"] }
+          },
+          {
+            "path": "inviterStealth",
+            "label": "Finder's mark — to your inviter",
+            "format": "addressName",
+            "params": { "types": ["wallet"] }
+          },
+          {
+            "path": "memo",
+            "label": "A word with it",
+            "format": "raw"
+          },
+          {
+            "path": "$.tx.value",
+            "label": "Total amount",
+            "format": "tokenAmount",
+            "params": { "tokenPath": null, "nativeCurrencyAddress": null }
+          }
+        ],
+        "required": ["recipientStealth", "inviterStealth", "$.tx.value"],
+        "excluded": ["recipientEphPubKey", "recipientViewTag", "inviterEphPubKey", "inviterViewTag"]
       }
     }
   }

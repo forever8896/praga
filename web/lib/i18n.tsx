@@ -220,6 +220,53 @@ const DICT: Dict = {
   "compose.forWork": { en: "FOR THE WORK — Kč", cs: "ZA PRÁCI — Kč" },
   "compose.where": { en: "WHERE — neighbourhood", cs: "KDE — čtvrť" },
   "compose.button.seal": { en: "SEAL & POST", cs: "ZAPEČETIT A VYVĚSIT" },
+
+  // CROPS hallmark + explainer
+  "crops.footer.line": {
+    en: "sealed by your own hand · forkable · MIT",
+    cs: "zapečetěno vlastní rukou · forkovatelné · MIT",
+  },
+  "crops.title": { en: "The four marks of the seal", cs: "Čtyři znaky pečetě" },
+  "crops.intro": {
+    en: "Every parchment in PragueConnect carries this hallmark. Four engravings around a fleur-de-lis. Each is a property the product is built to keep.",
+    cs: "Každý pergamen v PragueConnect nese tento znak. Čtyři rytiny kolem lilie. Každá je vlastnost, kterou chceme držet.",
+  },
+  "crops.cr.kicker": { en: "FIRST MARK · BROKEN CHAIN", cs: "PRVNÍ ZNAK · ZLÁMANÝ ŘETĚZ" },
+  "crops.cr.title": { en: "Censorship-resistant", cs: "Odolné cenzuře" },
+  "crops.cr.body": {
+    en: "Your page lives on Swarm and resolves through ENS. No company can take it down — not even us. The address of the page is yours.",
+    cs: "Vaše stránka žije na Swarmu a překládá se přes ENS. Žádná firma ji nemůže stáhnout — ani my. Adresa stránky patří vám.",
+  },
+  "crops.os.kicker": { en: "SECOND MARK · UNFOLDED SCROLL", cs: "DRUHÝ ZNAK · ROZBALENÝ SVITEK" },
+  "crops.os.title": { en: "Open as a seal", cs: "Otevřené jako pečeť" },
+  "crops.os.body": {
+    en: "Every line of code is public. The protocol is a few text records and two contracts — small enough to fork for any city. Berlinconnect, Lisbonconnect — go.",
+    cs: "Každý řádek kódu je veřejný. Protokol je pár text-recordů a dva kontrakty — dost malý na to, aby se daly forknout pro libovolné město. Berlinconnect, Lisbonconnect — do toho.",
+  },
+  "crops.priv.kicker": { en: "THIRD MARK · SEALED LETTER", cs: "TŘETÍ ZNAK · ZAPEČETĚNÝ DOPIS" },
+  "crops.priv.title": { en: "Private by default", cs: "Soukromé ve výchozím stavu" },
+  "crops.priv.body": {
+    en: "Tips arrive at fresh stealth addresses that nobody can link back to your name. Threads are end-to-end encrypted. Even your familiar drafts under a sealed roof.",
+    cs: "Dary dorazí na čerstvé stealth adresy, které nikdo nedokáže spojit s vaším jménem. Vlákna jsou koncově šifrovaná. I váš familiár tvoří pod zapečetěnou střechou.",
+  },
+  "crops.sec.kicker": { en: "FOURTH MARK · LION'S KEY", cs: "ČTVRTÝ ZNAK · LVÍ KLÍČ" },
+  "crops.sec.title": { en: "Secure as the metal", cs: "Bezpečné jako kov" },
+  "crops.sec.body": {
+    en: "Hardware wallets that read ERC-7730 see the names, not the hex. The contracts are minimal, audited where it matters, and the funds never sit on our books.",
+    cs: "Hardwarové peněženky, které čtou ERC-7730, vidí jména, ne hex. Kontrakty jsou minimální, auditované tam, kde to má váhu, a prostředky nikdy nesedí v naší knize.",
+  },
+  "crops.signature": {
+    en: "this is the maker's mark — pragueconnect for ETHPrague 2026",
+    cs: "to je značka tvůrce — pragueconnect pro ETHPrague 2026",
+  },
+  "crops.back": { en: "← back", cs: "← zpět" },
+
+  // Inheritance pull-tab + sealed-by trail
+  "inherit.kicker": { en: "AN INVITATION", cs: "POZVÁNKA" },
+  "inherit.youWereLed": { en: "You were led to this seal by", cs: "K této pečeti vás přivedl/a" },
+  "inherit.cta": { en: "INSCRIBE MY NAME", cs: "ZAPSAT MÉ JMÉNO" },
+  "inherit.dismiss": { en: "later", cs: "později" },
+  "profile.sealedBy": { en: "sealed by", cs: "zapečetěno rukou" },
 };
 
 interface I18nCtx {

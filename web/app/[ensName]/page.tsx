@@ -13,6 +13,7 @@ import { env } from "@/lib/env";
 import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
 import { decodeOffers } from "@/lib/offers";
 import { OwnerPanel } from "@/lib/owner-panel";
+import { InheritanceTab } from "@/lib/inheritance-tab";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ interface ProfileData {
   address: `0x${string}` | null;
   bio: string;
   location: string;
+  sealedBy: string | null;
   isClaimed: boolean;
   hasStealth: boolean;
   hasOffers: boolean;
@@ -46,6 +48,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       address: null,
       bio: "",
       location: "",
+      sealedBy: null,
       isClaimed: false,
       hasStealth: false,
       hasOffers: false,
@@ -66,6 +69,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     address: record.address,
     bio: record.text_records?.description ?? "",
     location: record.text_records?.location ?? "Praha",
+    sealedBy: record.text_records?.["sealed-by"] ?? null,
     isClaimed: true,
     hasStealth: !!record.text_records?.["stealth-meta-address"],
     hasOffers: decodeOffers(record.text_records?.offers).length > 0,
@@ -87,6 +91,9 @@ export default async function ProfilePage({
     <>
       <MobileProfile profile={profile} />
       <DesktopProfile profile={profile} />
+      {profile.isClaimed && (
+        <InheritanceTab inviterLabel={profile.label} inviterDisplay={profile.display} />
+      )}
     </>
   );
 }
@@ -180,6 +187,14 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
           </span>
           {profile.location && <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--ink-70)" }}>· {profile.location.toUpperCase()} ·</span>}
         </div>
+        {profile.sealedBy && (
+          <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-50)", textAlign: "center", marginTop: 8, letterSpacing: "0.02em" }}>
+            sealed by{" "}
+            <Link href={`/${profile.sealedBy}`} className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)", textDecoration: "none", borderBottom: "0.5px dotted var(--gilded)" }}>
+              {profile.sealedBy}
+            </Link>
+          </div>
+        )}
         <div style={{ marginTop: 18, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
           <a href={`/tip/${profile.ens}`} className="t-display" style={{ padding: "12px 18px", background: "var(--vermilion)", color: "var(--parchment)", fontFamily: "var(--display)", fontSize: 11, letterSpacing: "0.3em", display: "inline-flex", alignItems: "center", gap: 10, cursor: "pointer", textDecoration: "none" }}>
             <WaxSeal size={26} state="rubedo" rotate={-6} emboss="fleur" />
@@ -312,6 +327,14 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
             <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", marginTop: 8 }}>
               this site is sealed by PragueConnect · the name belongs to the human · reputation travels with the name
             </div>
+            {profile.sealedBy && (
+              <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-50)", marginTop: 12 }}>
+                sealed by{" "}
+                <Link href={`/${profile.sealedBy}`} className="t-mono" style={{ fontSize: 12, color: "var(--ink-70)", textDecoration: "none", borderBottom: "0.5px dotted var(--gilded)" }}>
+                  {profile.sealedBy}
+                </Link>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 16 }}>
               <FleurDeLis size={22} />
               <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-50)" }}>
