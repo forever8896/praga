@@ -102,31 +102,58 @@ a { color: inherit; text-decoration: none; }
  *   5. Parchment base, so cartouches/text stay legible
  * Tunable by --castle-* CSS vars below. */
 .page-castle {
-  background-color: var(--parchment);
+  background-color: #5b1a14;
   background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96' width='96' height='96'><g fill='none' stroke='%23B79F4E' stroke-width='0.9' stroke-linecap='round' stroke-linejoin='round' opacity='0.55'><path d='M48 22 C 48 32, 48 46, 48 56'/><path d='M48 18 C 45 22, 45 26, 48 28 C 51 26, 51 22, 48 18 Z'/><path d='M48 36 C 38 36, 30 42, 28 52 C 26 58, 32 60, 38 56 C 42 53, 44 46, 48 44'/><path d='M48 36 C 58 36, 66 42, 68 52 C 70 58, 64 60, 58 56 C 54 53, 52 46, 48 44'/><path d='M32 48 C 38 47, 58 47, 64 48'/><path d='M36 56 C 40 60, 56 60, 60 56'/><path d='M40 60 L 56 60'/><path d='M48 56 L 48 64'/></g></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80' width='80' height='80'><g fill='none' stroke='%23D4B567' stroke-width='1.05' stroke-linecap='round' stroke-linejoin='round' opacity='0.85'><path d='M40 18 C 40 28, 40 40, 40 48'/><path d='M40 14 C 37 18, 37 22, 40 24 C 43 22, 43 18, 40 14 Z'/><path d='M40 30 C 30 30, 22 36, 20 46 C 18 52, 24 54, 30 50 C 34 47, 36 40, 40 38'/><path d='M40 30 C 50 30, 58 36, 60 46 C 62 52, 56 54, 50 50 C 46 47, 44 40, 40 38'/><path d='M24 42 C 30 41, 50 41, 56 42'/><path d='M28 50 C 32 54, 48 54, 52 50'/><path d='M32 54 L 48 54'/><path d='M40 50 L 40 58'/></g></svg>"),
     repeating-linear-gradient(
       90deg,
-      transparent 0,
-      rgba(255, 235, 200, 0.045) 28px,
+      rgba(255, 220, 170, 0.06) 0,
+      rgba(255, 220, 170, 0.06) 2px,
+      transparent 2px,
       transparent 60px,
-      rgba(20, 6, 4, 0.06) 92px,
+      rgba(0, 0, 0, 0.15) 60px,
+      rgba(0, 0, 0, 0.15) 62px,
+      transparent 62px,
       transparent 120px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 240, 200, 0.05),
+      rgba(255, 240, 200, 0.05) 30px,
+      rgba(0, 0, 0, 0.08) 60px,
+      rgba(0, 0, 0, 0.08) 90px,
+      rgba(255, 240, 200, 0.05) 120px
     ),
     radial-gradient(
       ellipse at center,
-      transparent 40%,
-      rgba(40, 12, 10, 0.18) 100%
+      rgba(178, 58, 47, 0.0) 30%,
+      rgba(20, 6, 4, 0.55) 100%
     ),
     linear-gradient(
       180deg,
-      rgba(140, 38, 30, 0.22),
-      rgba(120, 32, 26, 0.28)
+      rgba(178, 58, 47, 0.55),
+      rgba(120, 28, 22, 0.7)
     );
-  background-size: 96px 96px, auto, auto, auto;
-  background-repeat: repeat, repeat, no-repeat, no-repeat;
-  background-attachment: fixed, fixed, fixed, fixed;
+  background-size: 80px 80px, auto, auto, auto, auto;
+  background-repeat: repeat, repeat, repeat, no-repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
 }
+
+/* Inside the castle, hero text sits directly on the velvet — invert to a
+ * warm-cream ink so titles and italics read against the dark backdrop.
+ * Cartouches keep their parchment fill and dark ink, untouched. */
+.page-castle h1,
+.page-castle h2,
+.page-castle p,
+.page-castle .display,
+.page-castle .italic:not(.cartouche .italic):not(.cartouche-parchment .italic) {
+  color: #f4ecd8;
+}
+.page-castle .mono-caps { color: rgba(244, 236, 216, 0.85); }
+.page-castle hr.hr-double,
+.page-castle hr.hr-gilded { border-color: rgba(215, 181, 103, 0.6); }
+.page-castle .btn-text { color: rgba(244, 236, 216, 0.7); }
+.page-castle .btn-text:hover { color: #f4ecd8; }
 
 /* ============== Type primitives ============== */
 
