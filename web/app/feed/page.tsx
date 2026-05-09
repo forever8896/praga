@@ -7,6 +7,6 @@ import { FeedView } from "@/lib/feed-view";
 export const dynamic = "force-dynamic";
 
 export default async function FeedPage() {
-  const offers = await loadFeed().catch(() => []);
-  return <FeedView offers={offers} />;
+  const { offers, people } = await loadFeed().catch(() => ({ offers: [], people: [] }));
+  return <FeedView offers={offers} people={people} />;
 }

@@ -29,10 +29,10 @@ function OnboardingScreen() {
           <Image
             src="/logo.png"
             alt="PragueConnect"
-            width={300}
-            height={200}
+            width={871}
+            height={831}
             priority
-            style={{ height: 84, width: "auto", display: "block" }}
+            style={{ height: 156, width: "auto", display: "block" }}
           />
         </div>
         <div className="italic" style={{ fontSize: 13, color: "var(--ink-50)", marginBottom: 14 }}>

@@ -9,6 +9,8 @@ import Link from "next/link";
 import { Cartouche, FleurDeLis, WaxSeal } from "./ornaments";
 import { getXmtpClient, openDm, type XmtpConversation, type XmtpMessage } from "./xmtp";
 import { EscrowPanel } from "./escrow-panel";
+import { markConversationRead } from "./inbox-view";
+import { playMessagePing } from "./notify";
 
 interface Peer {
   label: string;
@@ -89,15 +91,32 @@ export function ThreadView({ peer }: { peer: Peer }) {
             if (!m) continue;
             const decoded = decodeMessage(m as unknown as XmtpMessage, myInboxIdRef.current);
             if (!decoded) continue;
-            setMessages((curr) =>
-              curr.some((x) => x.id === decoded.id) ? curr : [...curr, decoded],
-            );
+            // De-dup against history. If we drop the message because it was
+            // already in our list, skip the ping too — only chime on novelty.
+            let appended = false;
+            setMessages((curr) => {
+              if (curr.some((x) => x.id === decoded.id)) return curr;
+              appended = true;
+              return [...curr, decoded];
+            });
+            if (appended && !decoded.fromMe) {
+              playMessagePing();
+            }
+            // If the message arrived while this thread is open, treat it as
+            // read — keeps the Letterbox dot accurate.
+            if (!decoded.fromMe && conversationRef.current) {
+              markConversationRead(conversationRef.current.id);
+            }
           }
         } catch {
           /* stream ended */
         }
       })();
       streamCloserRef.current = { end: () => stream.return?.() };
+
+      // Drop the unread mark for this thread now that the user is looking at
+      // it. The Letterbox reads this on its next render.
+      markConversationRead(conversation.id);
 
       setStage("ready");
     } catch (e) {
@@ -149,11 +168,35 @@ export function ThreadView({ peer }: { peer: Peer }) {
   return (
     <div className="parchment-surface" style={{ width: "100%", minHeight: "100vh", padding: "24px 20px 32px", display: "flex", justifyContent: "center" }}>
       <div style={{ maxWidth: 720, width: "100%", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ textAlign: "left" }}>
+          <Link
+            href="/m"
+            className="t-mono"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              letterSpacing: "0.18em",
+              color: "var(--ink-70)",
+              textDecoration: "none",
+              borderBottom: "0.5px dotted var(--gilded)",
+              paddingBottom: 2,
+            }}
+          >
+            ← LETTERBOX · ALL YOUR LETTERS
+          </Link>
+        </div>
         <div style={{ textAlign: "center" }}>
           <FleurDeLis size={24} style={{ margin: "0 auto 6px" }} />
           <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.4em", color: "var(--vermilion)" }}>SEALED LETTER TO</div>
           <div className="t-display" style={{ fontSize: 28, letterSpacing: "0.04em" }}>{peer.display}</div>
           <div className="t-mono" style={{ fontSize: 12, color: "var(--ink-70)" }}>{peer.ens}</div>
+          <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", marginTop: 8, lineHeight: 1.5, maxWidth: 480, marginInline: "auto" }}>
+            You are messaging {peer.display}. They will see your letter the
+            moment you press the seal — and your reply will appear in your
+            <Link href="/m" style={{ color: "var(--ink)", textDecoration: "underline", textDecorationStyle: "dotted", marginLeft: 4 }}>letterbox</Link>.
+          </div>
         </div>
 
         {stage === "loading" && <Centered>preparing the wax…</Centered>}

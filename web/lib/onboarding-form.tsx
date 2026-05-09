@@ -26,6 +26,50 @@ function writeInviteCookie(code: string): void {
   const secure = location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `pc_invite=${code}; Max-Age=${day}; Path=/; SameSite=Lax${secure}`;
 }
+
+// SessionStorage keys for surviving a Privy OAuth redirect. Some auth methods
+// (mobile OAuth in particular) navigate the tab away, then back — destroying
+// React state. We stash the in-flight name + intent so the form re-hydrates and
+// auto-resumes the claim once the user returns authenticated.
+const PENDING_NAME_KEY = "pc_pending_name";
+const PENDING_SEAL_KEY = "pc_pending_seal";
+
+function savePendingClaim(name: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(PENDING_NAME_KEY, name);
+    sessionStorage.setItem(PENDING_SEAL_KEY, "1");
+  } catch {
+    /* sessionStorage may be blocked (private mode, hostile browser); in that
+     *  case we accept the regression to typing the name twice. */
+  }
+}
+
+function clearPendingClaim(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(PENDING_NAME_KEY);
+    sessionStorage.removeItem(PENDING_SEAL_KEY);
+  } catch {}
+}
+
+function readPendingName(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(PENDING_NAME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function readPendingSeal(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return sessionStorage.getItem(PENDING_SEAL_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 import { useT, useI18n } from "./i18n";
 import {
   InscriptionStage,
@@ -70,6 +114,11 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
 
   void _size;
 
+  // Track whether we're resuming a claim across a Privy auth redirect. Set on
+  // mount if sessionStorage flagged a pending seal; consumed once when the
+  // post-auth auto-claim fires so we don't loop.
+  const pendingSealRef = useRef<boolean>(false);
+
   // Capture an invite handed off from /i/<code>?inv=ABCD2345 into the
   // pc_invite cookie, then drop the query so the URL stays clean.
   useEffect(() => {
@@ -82,6 +131,18 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
     }
     url.searchParams.delete("inv");
     window.history.replaceState({}, "", url.pathname + (url.search || ""));
+  }, []);
+
+  // Restore an in-flight name from before a Privy auth redirect. Runs once on
+  // mount so the parchment re-fills before the availability check fires; the
+  // auto-claim effect below then continues the flow without the user having to
+  // retype or re-press SEAL.
+  useEffect(() => {
+    const restored = readPendingName();
+    if (restored) {
+      setName(restored);
+      pendingSealRef.current = readPendingSeal();
+    }
   }, []);
 
   // If the signed-in user already owns a name, the gate is closed for them —
@@ -101,6 +162,8 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
         const data = await res.json();
         if (cancelled) return;
         if (res.ok && data.claimed && typeof data.ens === "string") {
+          clearPendingClaim();
+          pendingSealRef.current = false;
           router.replace(`/${data.ens}`);
         }
       } catch {
@@ -111,6 +174,22 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
       cancelled = true;
     };
   }, [ready, authenticated, router, showSealedBeat]);
+
+  // After a Privy auth round-trip that restored the name from sessionStorage,
+  // re-fire the claim once the availability check resolves to "available". This
+  // is what makes the cross-redirect flow feel continuous: the user pressed
+  // SEAL once, signed in, and the name lands without a second click.
+  useEffect(() => {
+    if (!ready || !authenticated) return;
+    if (!pendingSealRef.current) return;
+    if (claimState !== "available") return;
+    pendingSealRef.current = false;
+    clearPendingClaim();
+    onSeal();
+    // onSeal closes over the latest `name`; we intentionally re-run only on
+    // ready/authenticated/claimState transitions, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, authenticated, claimState]);
 
   // Debounced availability check via NameStone whenever `name` changes.
   useEffect(() => {
@@ -141,6 +220,14 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
+  // Wraps Privy's login() with a sessionStorage stash of the in-flight name +
+  // intent, so an OAuth redirect that nukes React state can be recovered on
+  // return without the user retyping or re-pressing SEAL.
+  const triggerLoginFor = (pendingName: string) => {
+    savePendingClaim(pendingName);
+    login();
+  };
+
   const onSeal = async () => {
     setErrorMsg(null);
     if (!name) return;
@@ -153,7 +240,7 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
         return;
       }
       setShowPromise(false);
-      login();
+      triggerLoginFor(name);
       return;
     }
     const claimAddress = user?.wallet?.address;
@@ -203,6 +290,9 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
         setClaimedCodes(data.inviteCodes.filter((c: unknown): c is string => typeof c === "string"));
       }
       clearInviter();
+      // Claim succeeded — drop the redirect-recovery breadcrumbs.
+      pendingSealRef.current = false;
+      clearPendingClaim();
 
       try {
         setClaimState("sealing-stealth");
@@ -355,7 +445,14 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
 
       {authenticated && (
         <div style={{ textAlign: "center", marginTop: 14 }}>
-          <button type="button" onClick={logout} className="btn btn-text">
+          <button
+            type="button"
+            onClick={() => {
+              clearPendingClaim();
+              logout();
+            }}
+            className="btn btn-text"
+          >
             sign out
           </button>
         </div>
@@ -374,7 +471,7 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
         <PromiseCard
           onContinue={() => {
             setShowPromise(false);
-            login();
+            triggerLoginFor(name);
           }}
           onCancel={() => setShowPromise(false)}
           lang={lang}

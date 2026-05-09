@@ -9,12 +9,13 @@ import {
 import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
-import { decodeOffers } from "@/lib/offers";
+import { decodeOffers, decodeSkills, type StoredSkill } from "@/lib/offers";
 import { OwnerPanel } from "@/lib/owner-panel";
 import { MyInvitesCartouche } from "@/lib/my-invites-cartouche";
 import { ProfileHire } from "@/lib/profile-hire";
 import { InheritanceTab } from "@/lib/inheritance-tab";
 import { ReciprocateCartouche } from "@/lib/reciprocate-cartouche";
+import { VisitorOnly } from "@/lib/visitor-only";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ interface ProfileData {
   hasStealth: boolean;
   hasOffers: boolean;
   stealthMeta: string | null;
+  skills: StoredSkill[];
   receiptsSent: TipReceipt[];
   receiptsReceived: TipReceipt[];
   /** Swarm bzz reference (32-byte hex) decoded from the subname's contenthash, if any. */
@@ -55,6 +57,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       hasStealth: false,
       hasOffers: false,
       stealthMeta: null,
+      skills: [],
       receiptsSent: [],
       receiptsReceived: [],
       swarmRef: null,
@@ -77,6 +80,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     hasStealth: !!record.text_records?.["stealth-meta-address"],
     hasOffers: decodeOffers(record.text_records?.offers).length > 0,
     stealthMeta: record.text_records?.["stealth-meta-address"] ?? null,
+    skills: decodeSkills(record.text_records?.skills),
     receiptsSent,
     receiptsReceived,
     swarmRef: extractSwarmRef(record.contenthash),
@@ -149,6 +153,104 @@ function SwarmBadge({ swarmRef, inline = false }: { swarmRef: string; inline?: b
       <span style={{ width: 6, height: 6, background: "var(--verdigris)", borderRadius: "50%" }} />
       SERVED FROM SWARM
     </a>
+  );
+}
+
+/** The catalogue — a profile's persistent skill listings. Each row is a sigil,
+ *  the skill name, the price (free-text from the editor) and a "REQUEST" button
+ *  that opens an XMTP thread with the seller. Skills are also surfaced into the
+ *  /feed town hall (see lib/offers.ts loadFeed) so they're discoverable next to
+ *  posted asks. Hidden when the profile has nothing in their catalogue. */
+function CatalogueBlock({
+  skills,
+  label,
+  display,
+  size,
+  ownerAddress,
+}: {
+  skills: StoredSkill[];
+  label: string;
+  display: string;
+  size: "mobile" | "desktop";
+  ownerAddress: `0x${string}` | null;
+}) {
+  if (skills.length === 0) return null;
+  const firstName = display.split(" ")[0];
+  return (
+    <div style={{ marginTop: size === "mobile" ? 28 : 0 }}>
+      <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>
+        The catalogue · {skills.length} {skills.length === 1 ? "skill" : "skills"}
+      </div>
+      <div className="t-display" style={{ fontSize: size === "mobile" ? 22 : 32, letterSpacing: "0.04em", marginBottom: 16 }}>
+        Skills offered by {firstName}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        {skills.map((s, i) => (
+          <SkillRow key={i} skill={s} label={label} compact={size === "mobile"} ownerAddress={ownerAddress} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SkillRow({ skill, label, compact, ownerAddress }: { skill: StoredSkill; label: string; compact: boolean; ownerAddress: `0x${string}` | null }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: compact ? "auto 1fr auto" : "auto 1fr auto auto",
+        gap: compact ? 12 : 16,
+        alignItems: "center",
+        padding: compact ? "12px 0" : "14px 0",
+        borderBottom: "0.5px solid var(--gilded)",
+      }}
+    >
+      <AlchemicalSigil kind={skill.kind} size={compact ? 32 : 40} />
+      <div style={{ minWidth: 0 }}>
+        <div className="t-body" style={{ fontSize: compact ? 16 : 18, lineHeight: 1.35, color: "var(--ink)" }}>
+          {skill.name}
+        </div>
+        {skill.price && (
+          <div className="t-italic" style={{ fontSize: compact ? 12 : 13, color: "var(--ink-70)", marginTop: 2 }}>
+            {skill.price}
+          </div>
+        )}
+      </div>
+      {!compact && (
+        <Link
+          href={`/tip/${label}.${env.namestoneDomain}`}
+          className="t-display"
+          style={{
+            padding: "8px 14px",
+            border: "0.5px solid var(--gilded)",
+            color: "var(--ink)",
+            fontSize: 10,
+            letterSpacing: "0.3em",
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          PRIVATE GIFT
+        </Link>
+      )}
+      <VisitorOnly ownerAddress={ownerAddress}>
+        <Link
+          href={`/m/${label}`}
+          className="t-display"
+          style={{
+            padding: compact ? "8px 12px" : "8px 14px",
+            background: "var(--vermilion)",
+            color: "var(--parchment)",
+            fontSize: 10,
+            letterSpacing: "0.3em",
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          REQUEST
+        </Link>
+      </VisitorOnly>
+    </div>
   );
 }
 
@@ -254,9 +356,11 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
             <WaxSeal size={26} state="rubedo" rotate={-6} emboss="fleur" />
             SEND A PRIVATE GIFT
           </a>
-          <a href={`/m/${profile.label}`} className="t-display" style={{ padding: "12px 18px", background: "transparent", border: "0.5px solid var(--gilded)", color: "var(--ink)", fontFamily: "var(--display)", fontSize: 11, letterSpacing: "0.3em", textDecoration: "none" }}>
-            SEND A SEALED LETTER
-          </a>
+          <VisitorOnly ownerAddress={profile.address}>
+            <a href={`/m/${profile.label}`} className="t-display" style={{ padding: "12px 18px", background: "transparent", border: "0.5px solid var(--gilded)", color: "var(--ink)", fontFamily: "var(--display)", fontSize: 11, letterSpacing: "0.3em", textDecoration: "none" }}>
+              SEND A SEALED LETTER
+            </a>
+          </VisitorOnly>
         </div>
       </Cartouche>
 
@@ -278,6 +382,8 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
       <div style={{ marginTop: 24 }}>
         <div className="t-italic" style={{ fontSize: 16, lineHeight: 1.55, color: "var(--ink)" }}>{bio}</div>
       </div>
+
+      <CatalogueBlock skills={profile.skills} label={profile.label} display={profile.display} size="mobile" ownerAddress={profile.address} />
 
       <div style={{ marginTop: 28 }}>
         <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>The wall</div>
@@ -348,15 +454,17 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
                 </div>
                 <a href={`/tip/${profile.ens}`} className="t-display" style={{ padding: "12px 22px", background: "var(--vermilion)", color: "var(--parchment)", fontSize: 12, letterSpacing: "0.3em", textDecoration: "none" }}>PRESS THE SEAL</a>
               </div>
-              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", border: "0.5px solid var(--gilded)" }}>
-                <div style={{ flex: 1 }}>
-                  <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--ink)" }}>SEND A SEALED LETTER</div>
-                  <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", marginTop: 2 }}>
-                    open an end-to-end encrypted thread keyed by {profile.ens} on XMTP
+              <VisitorOnly ownerAddress={profile.address}>
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", border: "0.5px solid var(--gilded)" }}>
+                  <div style={{ flex: 1 }}>
+                    <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--ink)" }}>SEND A SEALED LETTER</div>
+                    <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", marginTop: 2 }}>
+                      open an end-to-end encrypted thread keyed by {profile.ens} on XMTP
+                    </div>
                   </div>
+                  <a href={`/m/${profile.label}`} className="t-display" style={{ padding: "12px 22px", background: "var(--ink)", color: "var(--parchment)", fontSize: 12, letterSpacing: "0.3em", textDecoration: "none" }}>OPEN THREAD</a>
                 </div>
-                <a href={`/m/${profile.label}`} className="t-display" style={{ padding: "12px 22px", background: "var(--ink)", color: "var(--parchment)", fontSize: 12, letterSpacing: "0.3em", textDecoration: "none" }}>OPEN THREAD</a>
-              </div>
+              </VisitorOnly>
               <OwnerPanel
                 ownerAddress={profile.address}
                 hasBio={!!profile.bio}
@@ -374,7 +482,10 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
 
           <div className="hr-gilded" style={{ margin: "40px 0" }} />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 56 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 48 }}>
+            {profile.skills.length > 0 && (
+              <CatalogueBlock skills={profile.skills} label={profile.label} display={profile.display} size="desktop" ownerAddress={profile.address} />
+            )}
             <div>
               <div className="t-display" style={{ fontSize: 12, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>The wall · {profile.receiptsSent.length + profile.receiptsReceived.length} sealed</div>
               <div className="t-display" style={{ fontSize: 32, letterSpacing: "0.04em", marginBottom: 16 }}>Sealed receipts</div>
