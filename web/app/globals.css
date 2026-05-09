@@ -93,127 +93,64 @@ a { color: inherit; text-decoration: none; }
   font-size: 16px;
 }
 
-/* Castle-curtain backdrop — used on the landing page only.
- * Five layers, top to bottom:
- *   1. Tiled golden fleur-de-lis (~12% opacity)
- *   2. Subtle vertical "fabric folds" (highlight + shadow stripes)
- *   3. Soft radial vignette (corners drawn into shadow)
- *   4. Deep vermilion wash (the velvet)
- *   5. Parchment base, so cartouches/text stay legible
- * Tunable by --castle-* CSS vars below. */
+/* Castle backdrop — landing page only.
+ *
+ * Real velvet curtain photograph as the substrate, with a dark vertical
+ * gradient on top to control focus around the parchment scroll. We tried
+ * painting the velvet via CSS (gradients + turbulence noise) for six
+ * iterations; nothing matched real fabric. A photograph + framed content
+ * is the modern landing-page pattern (Apple, Linear, museum sites) and
+ * the Rudolfine-Prague theme actually gains from photography. */
 .page-castle {
   position: relative;
-  background-color: #7a2218;
+  background-color: #2a0a07; /* fallback while the photo loads */
   background-image:
-    /* 1. fabric noise — tiny grain so the velvet isn't plastic */
-    url("/velvet-noise.svg"),
-    /* 2. golden fleur damask, embroidered into the cloth */
-    url("/fleur-tile.svg"),
-    /* 3. PLEATS — 3 different-width panels per 405px cycle so the eye
-     *    never catches the repeat. Widths 110 / 135 / 160. Each panel
-     *    has its own ridge intensity so adjacent pleats look hand-hung
-     *    instead of stamped from the same plate. */
-    repeating-linear-gradient(
-      90deg,
-      /* panel A — 110px, brighter ridge */
-      rgba(0, 0, 0, 0.30) 0px,
-      rgba(0, 0, 0, 0.20) 4px,
-      rgba(0, 0, 0, 0.05) 30px,
-      rgba(255, 235, 200, 0.18) 55px,
-      rgba(0, 0, 0, 0.05) 80px,
-      rgba(0, 0, 0, 0.20) 106px,
-      rgba(0, 0, 0, 0.30) 110px,
-      /* panel B — 135px, dimmer ridge (in a fold's "back" curve) */
-      rgba(0, 0, 0, 0.32) 110px,
-      rgba(0, 0, 0, 0.22) 116px,
-      rgba(0, 0, 0, 0.08) 145px,
-      rgba(255, 220, 180, 0.10) 178px,
-      rgba(0, 0, 0, 0.08) 210px,
-      rgba(0, 0, 0, 0.22) 240px,
-      rgba(0, 0, 0, 0.32) 245px,
-      /* panel C — 160px, brightest ridge (in the foreground swell) */
-      rgba(0, 0, 0, 0.28) 245px,
-      rgba(0, 0, 0, 0.18) 252px,
-      rgba(0, 0, 0, 0.04) 290px,
-      rgba(255, 240, 210, 0.22) 325px,
-      rgba(0, 0, 0, 0.04) 360px,
-      rgba(0, 0, 0, 0.18) 398px,
-      rgba(0, 0, 0, 0.28) 405px
-    ),
-    /* 4. global red wash — gentler now that the base is lighter */
     linear-gradient(
       180deg,
-      rgba(120, 30, 22, 0.20),
-      rgba(70, 16, 12, 0.32)
+      rgba(15, 4, 3, 0.55) 0%,
+      rgba(15, 4, 3, 0.30) 30%,
+      rgba(15, 4, 3, 0.30) 70%,
+      rgba(15, 4, 3, 0.65) 100%
     ),
-    /* 5. candlelit vignette — corners drawn into shadow */
-    radial-gradient(
-      ellipse at center,
-      rgba(20, 6, 4, 0) 38%,
-      rgba(10, 3, 2, 0.55) 100%
-    );
-  background-size: 240px 240px, 180px 220px, 405px auto, auto, auto;
-  background-repeat: repeat, repeat, repeat, no-repeat, no-repeat;
-  background-attachment: fixed, fixed, fixed, fixed, fixed;
-  background-blend-mode: overlay, normal, normal, normal, normal;
+    url("/flordelis.jpg");
+  background-size: cover, cover;
+  background-position: center, center;
+  background-attachment: fixed, fixed;
+  background-repeat: no-repeat, no-repeat;
 }
 
-/* Hero scroll — a soft dark vertical sash unfurled behind the headline so
- * it reads as a banner draped on the curtain, not text floating in chaos.
- * Sits behind .container-tight via ::before, doesn't capture pointer events. */
+/* The parchment scroll — an unfurled document on the velvet stage.
+ * Holds the entire hero stack (headline, tagline, OnboardingForm, the
+ * EN/CS toggle row). Translucent enough that the curtain breathes
+ * through but solid enough that ink-on-parchment is fully legible. */
 .page-castle > .container-tight {
+  background: rgba(244, 236, 216, 0.94);
+  border: 0.5px solid rgba(183, 159, 78, 0.55);
+  box-shadow:
+    0 30px 80px -20px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  padding: 48px 28px 56px !important;
+  margin: 36px auto !important;
+  max-width: 560px;
   position: relative;
+  border-radius: 2px; /* near-square — letterpress, not a card */
 }
+@media (min-width: 768px) {
+  .page-castle > .container-tight {
+    padding: 64px 56px 72px !important;
+    margin: 56px auto !important;
+  }
+}
+
+/* Subtle gilded inner frame inside the scroll, a hairline drawn with
+ * the gilded soft tone. Reads like the embossed border of a parchment. */
 .page-castle > .container-tight::before {
   content: "";
   position: absolute;
-  inset: 0 -8% 0 -8%;
-  background: linear-gradient(
-    180deg,
-    transparent 0,
-    rgba(15, 4, 3, 0.0) 4%,
-    rgba(15, 4, 3, 0.55) 14%,
-    rgba(15, 4, 3, 0.55) 64%,
-    rgba(15, 4, 3, 0.0) 78%,
-    transparent 100%
-  );
-  filter: blur(28px);
+  inset: 10px;
+  border: 0.5px solid rgba(183, 159, 78, 0.28);
   pointer-events: none;
-  z-index: 0;
 }
-.page-castle > .container-tight > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* White hero text on velvet — strong but soft shadow so the gold fleurs
- * behind never dim the title. */
-.page-castle h1.display {
-  text-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.8),
-    0 4px 22px rgba(0, 0, 0, 0.55),
-    0 0 1px rgba(0, 0, 0, 0.9);
-}
-.page-castle .container-tight > p,
-.page-castle .container-tight > .italic {
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 2px 10px rgba(0, 0, 0, 0.55);
-}
-
-/* Inside the castle, hero text sits directly on the velvet — pure white
- * so titles and italics cut cleanly through the gold-and-burgundy noise.
- * Cartouches keep their parchment fill and dark ink, untouched. */
-.page-castle h1,
-.page-castle h2,
-.page-castle p,
-.page-castle .display,
-.page-castle .italic:not(.cartouche .italic):not(.cartouche-parchment .italic) {
-  color: #ffffff;
-}
-.page-castle .mono-caps { color: rgba(255, 255, 255, 0.92); }
-.page-castle hr.hr-double,
-.page-castle hr.hr-gilded { border-color: rgba(220, 188, 110, 0.7); }
-.page-castle .btn-text { color: rgba(255, 255, 255, 0.78); }
-.page-castle .btn-text:hover { color: #ffffff; }
 
 /* ============== Type primitives ============== */
 
