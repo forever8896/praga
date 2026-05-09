@@ -11,6 +11,7 @@ import { env } from "@/lib/env";
 import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
 import { decodeOffers } from "@/lib/offers";
 import { OwnerPanel } from "@/lib/owner-panel";
+import { MyInvitesCartouche } from "@/lib/my-invites-cartouche";
 import { InheritanceTab } from "@/lib/inheritance-tab";
 import { ReciprocateCartouche } from "@/lib/reciprocate-cartouche";
 import Link from "next/link";
@@ -262,6 +263,8 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
         hasStealth={profile.hasStealth}
       />
 
+      <MyInvitesCartouche ownerAddress={profile.address} />
+
       <div style={{ marginTop: 24 }}>
         <div className="t-italic" style={{ fontSize: 16, lineHeight: 1.55, color: "var(--ink)" }}>{bio}</div>
       </div>
@@ -350,6 +353,7 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
                 hasOffers={profile.hasOffers}
                 hasStealth={profile.hasStealth}
               />
+              <MyInvitesCartouche ownerAddress={profile.address} />
             </div>
           </div>
 

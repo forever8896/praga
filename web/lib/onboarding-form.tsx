@@ -64,7 +64,6 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
   const [claimedInviter, setClaimedInviter] = useState<ClaimedInviter | null>(null);
   const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
   const [showSealedBeat, setShowSealedBeat] = useState(false);
-  const [authDebug, setAuthDebug] = useState<string>("");
   const router = useRouter();
   const checkAbort = useRef<AbortController | null>(null);
   const inscriptionStartRef = useRef<number | null>(null);
@@ -90,36 +89,22 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
   // a page refresh after claiming would re-render the inscription input as if
   // they were a fresh visitor.
   useEffect(() => {
-    setAuthDebug(`ready=${ready} auth=${authenticated}`);
-    if (!ready) return;
-    if (!authenticated) return;
-    if (showSealedBeat) return;
+    if (!ready || !authenticated || showSealedBeat) return;
     let cancelled = false;
     (async () => {
       try {
         const tok = await getAccessToken();
-        if (cancelled) return;
-        if (!tok) {
-          setAuthDebug("no-access-token");
-          return;
-        }
-        setAuthDebug("auth ok, calling /api/my-name…");
+        if (cancelled || !tok) return;
         const res = await fetch("/api/my-name", {
           headers: { Authorization: `Bearer ${tok}` },
         });
         const data = await res.json();
         if (cancelled) return;
         if (res.ok && data.claimed && typeof data.ens === "string") {
-          setAuthDebug(`claimed → /${data.ens} (replacing)`);
           router.replace(`/${data.ens}`);
-        } else {
-          const summary = res.ok
-            ? `claimed=false addr=${data?.debug?.lookupAddress ?? "?"} known=${(data?.debug?.knownAddresses ?? []).length}`
-            : `${res.status} ${data?.error ?? ""} ${data?.reason ?? ""}`;
-          setAuthDebug(summary);
         }
-      } catch (e) {
-        setAuthDebug(`fetch-error: ${e instanceof Error ? e.message : String(e)}`);
+      } catch {
+        /* leave the form in idle state */
       }
     })();
     return () => {
@@ -294,23 +279,6 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
 
   return (
     <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
-      {authDebug && (
-        <div
-          style={{
-            background: "var(--vermilion-wash, #f5e8e4)",
-            border: "0.5px solid var(--vermilion)",
-            color: "var(--vermilion)",
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            padding: "6px 10px",
-            marginBottom: 12,
-            textAlign: "center",
-            wordBreak: "break-all",
-          }}
-        >
-          [auth] {authDebug}
-        </div>
-      )}
       <div style={{ marginBottom: 18, display: "flex", justifyContent: "center" }}>
         <LivePreviewParchment
           name={name}
