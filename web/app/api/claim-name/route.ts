@@ -6,7 +6,7 @@
 // (code's owner) becomes the claimant's `sealed-by` chain — that drives the
 // 5% finder's-mark on tipWithReferral.
 import { NextResponse } from "next/server";
-import { getSubname, setSubname } from "@/lib/resolver";
+import { getSubname, setSubname, listSubnames } from "@/lib/resolver";
 import { env } from "@/lib/env";
 import {
   consumeInvite,
@@ -46,15 +46,26 @@ export async function POST(req: Request) {
   const inviteCode = (body.inviteCode ?? "").toString().trim().toUpperCase();
 
   // Hard invite gate: validate the code BEFORE writing anything.
+  // Genesis escape — the very first claim (no prior subnames in store) gets
+  // through without a code, because the birthgiver of the chain has no one to
+  // invite them. Subsequent claims must present an invite.
+  let isGenesis = false;
   if (INVITE_REQUIRED) {
     if (!inviteCode) {
-      return NextResponse.json({ error: "invite-required" }, { status: 403 });
-    }
-    const valid = await validateInvite(inviteCode);
-    if (!valid) {
-      return NextResponse.json({ error: "invite-invalid" }, { status: 403 });
+      const priorClaims = await listSubnames(env.namestoneDomain, 1).catch(() => []);
+      if (priorClaims.length === 0) {
+        isGenesis = true;
+      } else {
+        return NextResponse.json({ error: "invite-required" }, { status: 403 });
+      }
+    } else {
+      const valid = await validateInvite(inviteCode);
+      if (!valid) {
+        return NextResponse.json({ error: "invite-invalid" }, { status: 403 });
+      }
     }
   }
+  void isGenesis;
 
   // Resolve the inviter chain. If the body provides `invitedBy` we use it;
   // otherwise we derive it from the invite code's owner. The code's owner
