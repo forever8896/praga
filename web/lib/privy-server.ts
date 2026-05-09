@@ -1,6 +1,13 @@
-// Server-side Privy: verify the access token a logged-in client sends with
-// authenticated API calls. Returns the wallet address bound to the token.
-import { PrivyClient } from "@privy-io/server-auth";
+// Server-side Privy auth. Verifies the identity token a logged-in client
+// sends with authenticated API calls (the one returned by useIdentityToken on
+// the React side). Returns the wallet address bound to the token.
+//
+// IMPORTANT: privy-io/server-auth has two distinct verifiers in v3 —
+//   verifyAuthToken(token)        : for ACCESS tokens (auth header by default)
+//   getUserFromIdToken(idToken)   : for IDENTITY tokens (the cookie / hook value)
+// Our React side uses useIdentityToken, so we must use getUserFromIdToken.
+// Mixing them up returns 401 even for valid sessions.
+import { PrivyClient, type User } from "@privy-io/server-auth";
 
 const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 const appSecret = process.env.PRIVY_APP_SECRET;
@@ -20,7 +27,23 @@ export interface VerifiedSession {
   address: `0x${string}` | null;
 }
 
-/** Verify an Authorization: Bearer <token> header. Returns null if missing/invalid. */
+function pickEthereumWallet(user: User): `0x${string}` | null {
+  for (const account of user.linkedAccounts ?? []) {
+    if (
+      account.type === "wallet" &&
+      "address" in account &&
+      typeof account.address === "string" &&
+      /^0x[a-fA-F0-9]{40}$/.test(account.address) &&
+      // chainType may be "ethereum" or "solana" — we only want ETH addresses.
+      ((account as { chainType?: string }).chainType ?? "ethereum") === "ethereum"
+    ) {
+      return account.address.toLowerCase() as `0x${string}`;
+    }
+  }
+  return null;
+}
+
+/** Verify an Authorization: Bearer <identityToken> header. Returns null if missing/invalid. */
 export async function verifySession(req: Request): Promise<VerifiedSession | null> {
   const auth = req.headers.get("authorization") ?? req.headers.get("Authorization");
   if (!auth) return null;
@@ -28,27 +51,15 @@ export async function verifySession(req: Request): Promise<VerifiedSession | nul
   if (!m) return null;
   const token = m[1];
 
-  let claims: Awaited<ReturnType<PrivyClient["verifyAuthToken"]>>;
+  let user: User;
   try {
-    claims = await getClient().verifyAuthToken(token);
+    user = await getClient().getUserFromIdToken(token);
   } catch {
     return null;
   }
 
-  const userId = claims.userId;
-  let address: `0x${string}` | null = null;
-  try {
-    const user = await getClient().getUserById(userId);
-    const wallet = user.linkedAccounts.find(
-      (a): a is typeof a & { address: string } =>
-        a.type === "wallet" && "address" in a && typeof a.address === "string",
-    );
-    if (wallet?.address && /^0x[a-fA-F0-9]{40}$/.test(wallet.address)) {
-      address = wallet.address.toLowerCase() as `0x${string}`;
-    }
-  } catch {
-    /* leave address null — caller can decide to 403 */
-  }
-
-  return { userId, address };
+  return {
+    userId: user.id,
+    address: pickEthereumWallet(user),
+  };
 }
