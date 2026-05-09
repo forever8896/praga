@@ -15,15 +15,24 @@
 import { NextResponse } from "next/server";
 import { createPublicClient, createWalletClient, http, parseEther, formatEther } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { kv } from "@vercel/kv";
 import { verifySession } from "@/lib/privy-server";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 
-const DRIP_AMOUNT = parseEther("0.005");
-const DRIP_THRESHOLD = parseEther("0.001"); // skip if user already has this much
+// Drip amounts tuned per chain. Base mainnet gas is so cheap (~0.006 gwei) that
+// 0.0001 ETH covers thousands of tip transactions; 0.005 ETH would be wildly
+// excessive. Base Sepolia is left at the historical 0.005 ETH for testnet runs.
+const DRIP_AMOUNT_BY_CHAIN: Record<number, bigint> = {
+  [base.id]: parseEther("0.0001"),
+  [baseSepolia.id]: parseEther("0.005"),
+};
+const DRIP_THRESHOLD_BY_CHAIN: Record<number, bigint> = {
+  [base.id]: parseEther("0.00005"),
+  [baseSepolia.id]: parseEther("0.001"),
+};
 const COOLDOWN_SECONDS = 60 * 60 * 24; // one drip per address per day
 
 const KV_AVAILABLE = Boolean(
@@ -35,9 +44,13 @@ export async function POST(req: Request) {
   if (!faucetKey) {
     return NextResponse.json({ error: "faucet-not-configured" }, { status: 503 });
   }
-  if (env.defaultChainId !== baseSepolia.id) {
+  const chain = env.defaultChainId === base.id ? base : baseSepolia;
+  const dripAmount = DRIP_AMOUNT_BY_CHAIN[env.defaultChainId];
+  const dripThreshold = DRIP_THRESHOLD_BY_CHAIN[env.defaultChainId];
+  if (!dripAmount || !dripThreshold) {
     return NextResponse.json({ error: "wrong-chain" }, { status: 400 });
   }
+  const rpcUrl = env.defaultChainId === base.id ? env.baseRpcUrl : env.baseSepoliaRpcUrl;
 
   const session = await verifySession(req);
   if (!session) {
@@ -61,12 +74,11 @@ export async function POST(req: Request) {
     }
   }
 
-  const rpcUrl = env.baseSepoliaRpcUrl;
-  const publicClient = createPublicClient({ chain: baseSepolia, transport: http(rpcUrl) });
+  const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
 
   // Skip if user already has enough.
   const balance = await publicClient.getBalance({ address: recipient }).catch(() => BigInt(0));
-  if (balance >= DRIP_THRESHOLD) {
+  if (balance >= dripThreshold) {
     return NextResponse.json({
       ok: true,
       skipped: "already-funded",
@@ -75,12 +87,12 @@ export async function POST(req: Request) {
   }
 
   const account = privateKeyToAccount(faucetKey as `0x${string}`);
-  const walletClient = createWalletClient({ account, chain: baseSepolia, transport: http(rpcUrl) });
+  const walletClient = createWalletClient({ account, chain, transport: http(rpcUrl) });
 
   // Double-check faucet balance — surface a clear error if dry rather than a
   // generic "insufficient funds" from the RPC.
   const faucetBal = await publicClient.getBalance({ address: account.address }).catch(() => BigInt(0));
-  if (faucetBal < DRIP_AMOUNT * BigInt(2)) {
+  if (faucetBal < dripAmount * BigInt(2)) {
     return NextResponse.json(
       {
         error: "faucet-low",
@@ -95,7 +107,7 @@ export async function POST(req: Request) {
   try {
     txHash = await walletClient.sendTransaction({
       to: recipient,
-      value: DRIP_AMOUNT,
+      value: dripAmount,
     });
   } catch (e) {
     return NextResponse.json(
@@ -121,7 +133,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     txHash,
-    amount: formatEther(DRIP_AMOUNT),
+    amount: formatEther(dripAmount),
     recipient,
   });
 }

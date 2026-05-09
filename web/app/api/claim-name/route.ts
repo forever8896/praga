@@ -14,6 +14,7 @@ import {
   mintCodesForUser,
   INVITE_REQUIRED,
 } from "@/lib/invite-codes";
+import { settleFundedInvite } from "@/lib/invites-contract";
 
 export const runtime = "nodejs";
 
@@ -115,6 +116,15 @@ export async function POST(req: Request) {
     // Mint this new user's own invite codes so they can pass the seal forward.
     const ownCodes = await mintCodesForUser(`${name}.${env.namestoneDomain}`).catch(() => []);
 
+    // Settle any funds attached to the invite code. This is best-effort: the
+    // claim has already succeeded above, and a failure here just means the
+    // funds remain in the Invites contract (the inviter can reclaim them, or
+    // an admin can manually settle later).
+    let inviteFunds: { txHash: string; amount: string } | null = null;
+    if (inviteCode) {
+      inviteFunds = await settleFundedInvite(inviteCode, address as `0x${string}`).catch(() => null);
+    }
+
     return NextResponse.json({
       ok: true,
       ens: `${name}.${env.namestoneDomain}`,
@@ -124,6 +134,7 @@ export async function POST(req: Request) {
           ? { ens: sealedBy, display: inviterDisplay }
           : null,
       inviteCodes: ownCodes,
+      inviteFunds,
     });
   } catch (e) {
     return NextResponse.json(

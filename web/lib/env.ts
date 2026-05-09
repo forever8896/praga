@@ -14,10 +14,12 @@ export const env = {
   // https://github.com/ScopeLift/stealth-address-erc-contracts
   erc5564Announcer: "0x55649E01B5Df198D18D95b5cc5051630cfD45564",
   erc6538Registry: "0x6538E6bf4B0eBd30A8Ea093027Ac2422ce5d6538",
-  // PragueConnect's own deployed addresses — empty until contracts/script/Deploy.s.sol is run.
+  // PragueConnect's own deployed addresses — set after running the deploy scripts.
   escrowAddress: process.env.NEXT_PUBLIC_PRAGUECONNECT_ESCROW_ADDRESS ?? "",
   tipAddress: (process.env.NEXT_PUBLIC_PRAGUECONNECT_TIP_ADDRESS ?? "") as `0x${string}` | "",
-  // Default chain: Base mainnet. Set to base-sepolia for hackathon demo.
+  invitesAddress: (process.env.NEXT_PUBLIC_PRAGUECONNECT_INVITES_ADDRESS ?? "") as `0x${string}` | "",
+  // Default chain: Base mainnet (8453). Override with NEXT_PUBLIC_DEFAULT_CHAIN_ID
+  // for testnet (84532 = Base Sepolia).
   defaultChainId: Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN_ID ?? "8453"),
 };
 
