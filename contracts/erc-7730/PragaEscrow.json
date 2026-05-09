@@ -1,0 +1,118 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
+  "context": {
+    "$id": "PragaEscrow — Magnum Opus four-phase escrow",
+    "contract": {
+      "deployments": [
+        { "chainId": 84532, "address": "0xcec992ABAfA04cD2F0c89BFAa93bdae3bF9da67F" }
+      ],
+      "abi": [
+        {
+          "type": "function",
+          "name": "fund",
+          "stateMutability": "payable",
+          "inputs": [
+            { "name": "taskId", "type": "bytes32" },
+            { "name": "worker", "type": "address" }
+          ],
+          "outputs": []
+        },
+        {
+          "type": "function",
+          "name": "accept",
+          "stateMutability": "nonpayable",
+          "inputs": [
+            { "name": "taskId", "type": "bytes32" },
+            { "name": "stealthRecipient", "type": "address" },
+            { "name": "ephemeralPubKey", "type": "bytes" },
+            { "name": "viewTag", "type": "bytes1" }
+          ],
+          "outputs": []
+        },
+        {
+          "type": "function",
+          "name": "deliver",
+          "stateMutability": "nonpayable",
+          "inputs": [{ "name": "taskId", "type": "bytes32" }],
+          "outputs": []
+        },
+        {
+          "type": "function",
+          "name": "release",
+          "stateMutability": "nonpayable",
+          "inputs": [
+            { "name": "taskId", "type": "bytes32" },
+            { "name": "rating", "type": "uint8" }
+          ],
+          "outputs": []
+        },
+        {
+          "type": "function",
+          "name": "refund",
+          "stateMutability": "nonpayable",
+          "inputs": [{ "name": "taskId", "type": "bytes32" }],
+          "outputs": []
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Praga",
+    "info": {
+      "legalName": "Praga — by the hand of",
+      "url": "https://praga-azure.vercel.app",
+      "deploymentDate": "2026-05-08"
+    },
+    "constants": {
+      "scopelift_announcer": "0x55649E01B5Df198D18D95b5cc5051630cfD45564",
+      "phase_nigredo": "1 · Funded; the work has not yet begun",
+      "phase_albedo": "2 · In progress; the worker has begun",
+      "phase_citrinitas": "3 · Delivered; awaiting release",
+      "phase_rubedo": "4 · Released; the seal is broken in joy"
+    }
+  },
+  "display": {
+    "formats": {
+      "fund(bytes32,address)": {
+        "intent": "Fund the work — Nigredo phase",
+        "fields": [
+          { "path": "worker", "label": "Worker", "format": "addressName", "params": { "types": ["wallet"] } },
+          { "path": "$.tx.value", "label": "Amount staked", "format": "tokenAmount", "params": { "tokenPath": null, "nativeCurrencyAddress": null } },
+          { "path": "taskId", "label": "Task seal", "format": "raw" }
+        ],
+        "required": ["worker", "$.tx.value"]
+      },
+      "accept(bytes32,address,bytes,bytes1)": {
+        "intent": "Accept the work — Albedo phase",
+        "fields": [
+          { "path": "stealthRecipient", "label": "Sealed delivery address", "format": "addressName", "params": { "types": ["wallet"] } },
+          { "path": "taskId", "label": "Task seal", "format": "raw" }
+        ],
+        "required": ["stealthRecipient"],
+        "excluded": ["ephemeralPubKey", "viewTag"]
+      },
+      "deliver(bytes32)": {
+        "intent": "Mark the work delivered — Citrinitas phase",
+        "fields": [
+          { "path": "taskId", "label": "Task seal", "format": "raw" }
+        ],
+        "required": ["taskId"]
+      },
+      "release(bytes32,uint8)": {
+        "intent": "Release the seal with a rating — Rubedo phase",
+        "fields": [
+          { "path": "taskId", "label": "Task seal", "format": "raw" },
+          { "path": "rating", "label": "Rating (1–5)", "format": "raw" }
+        ],
+        "required": ["rating"]
+      },
+      "refund(bytes32)": {
+        "intent": "Refund the work — return funds to funder",
+        "fields": [
+          { "path": "taskId", "label": "Task seal", "format": "raw" }
+        ],
+        "required": ["taskId"]
+      }
+    }
+  }
+}

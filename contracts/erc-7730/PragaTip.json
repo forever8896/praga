@@ -1,0 +1,64 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
+  "context": {
+    "$id": "PragaTip — sealed gift",
+    "contract": {
+      "deployments": [
+        { "chainId": 84532, "address": "0x44b09471Ece57443FE5b9d350eF3B4f90244AB1b" }
+      ],
+      "abi": [
+        {
+          "type": "function",
+          "name": "tip",
+          "stateMutability": "payable",
+          "inputs": [
+            { "name": "stealthRecipient", "type": "address" },
+            { "name": "ephemeralPubKey", "type": "bytes" },
+            { "name": "viewTag", "type": "bytes1" },
+            { "name": "memo", "type": "string" }
+          ],
+          "outputs": []
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Praga",
+    "info": {
+      "legalName": "Praga — by the hand of",
+      "url": "https://praga-azure.vercel.app",
+      "deploymentDate": "2026-05-08"
+    },
+    "constants": {
+      "scopelift_announcer": "0x55649E01B5Df198D18D95b5cc5051630cfD45564"
+    }
+  },
+  "display": {
+    "formats": {
+      "tip(address,bytes,bytes1,string)": {
+        "intent": "Send a sealed private gift",
+        "fields": [
+          {
+            "path": "stealthRecipient",
+            "label": "Sealed delivery address",
+            "format": "addressName",
+            "params": { "types": ["wallet"] }
+          },
+          {
+            "path": "memo",
+            "label": "A word with it",
+            "format": "raw"
+          },
+          {
+            "path": "$.tx.value",
+            "label": "Amount",
+            "format": "tokenAmount",
+            "params": { "tokenPath": null, "nativeCurrencyAddress": null }
+          }
+        ],
+        "required": ["stealthRecipient", "$.tx.value"],
+        "excluded": ["ephemeralPubKey", "viewTag"]
+      }
+    }
+  }
+}
