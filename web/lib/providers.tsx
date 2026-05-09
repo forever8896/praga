@@ -25,7 +25,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <I18nProvider><PrivyProvider
       appId={env.privyAppId}
       config={{
-        loginMethods: ["email", "sms", "google"],
+        loginMethods: ["email", "google"],
         appearance: {
           theme: "light",
           accentColor: "#B23A2F",
