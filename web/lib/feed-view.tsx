@@ -397,7 +397,7 @@ export function FeedView({ offers, people }: { offers: FeedOffer[]; people: Feed
   }, [offers]);
 
   return (
-    <>
+    <FeedGate authenticated={authenticated}>
       <MobileFeed
         offers={visible}
         all={offers}
@@ -423,7 +423,102 @@ export function FeedView({ offers, people }: { offers: FeedOffer[]; people: Feed
         neighbourhoods={neighbourhoods}
         myAddress={myAddress}
       />
-    </>
+    </FeedGate>
+  );
+}
+
+/** Blurs the town square for non-authenticated visitors and surfaces a
+ *  centered cartouche explaining the invite-gated entry. The blurred layer
+ *  is non-interactive so visitors can't click through to a protected flow. */
+function FeedGate({ authenticated, children }: { authenticated: boolean; children: React.ReactNode }) {
+  const { login } = usePrivy();
+  if (authenticated) return <>{children}</>;
+  return (
+    <div style={{ position: "relative", minHeight: "100vh" }}>
+      <div
+        aria-hidden
+        style={{
+          filter: "blur(8px) saturate(0.85)",
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      >
+        {children}
+      </div>
+
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 20,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+          background:
+            "radial-gradient(circle at 50% 40%, rgba(244,236,216,0.55) 0%, rgba(244,236,216,0.92) 60%)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 460,
+            width: "100%",
+            background: "var(--parchment)",
+            border: "0.5px solid var(--gilded)",
+            padding: "32px 28px",
+            textAlign: "center",
+            boxShadow: "0 20px 60px -20px rgba(31,26,18,0.3)",
+          }}
+        >
+          <FleurDeLis size={26} stroke="var(--vermilion)" style={{ margin: "0 auto 12px" }} />
+          <div className="t-display" style={{ fontSize: 10, letterSpacing: "0.4em", color: "var(--vermilion)", marginBottom: 8 }}>
+            BEHIND THE GATE
+          </div>
+          <div className="t-display" style={{ fontSize: 26, letterSpacing: "0.04em", marginBottom: 12, color: "var(--ink)" }}>
+            The town square is for the inscribed
+          </div>
+          <p className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", lineHeight: 1.55, margin: "0 0 18px" }}>
+            Sign in with the seal you carry, or claim a new one. The notices on this square stay sealed until you stand among them.
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => login()}
+              className="t-display"
+              style={{
+                padding: "12px 22px",
+                background: "var(--ink)",
+                color: "var(--parchment)",
+                fontSize: 11,
+                letterSpacing: "0.3em",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              ENTER WITH YOUR SEAL
+            </button>
+            <Link
+              href="/"
+              className="t-display"
+              style={{
+                padding: "12px 22px",
+                background: "transparent",
+                border: "0.5px solid var(--gilded)",
+                color: "var(--ink)",
+                fontSize: 11,
+                letterSpacing: "0.3em",
+                textDecoration: "none",
+              }}
+            >
+              CLAIM A NAME
+            </Link>
+          </div>
+          <div className="t-mono" style={{ fontSize: 10, color: "var(--ink-50)", marginTop: 16, letterSpacing: "0.1em" }}>
+            an invite code is required for new claims
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

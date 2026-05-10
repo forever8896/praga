@@ -7,6 +7,7 @@ import Image from "next/image";
 import { CropsSeal, FleurDeLis } from "@/lib/ornaments";
 import { OnboardingForm } from "@/lib/onboarding-form";
 import { InviterCapture, InviterAcknowledgement } from "@/lib/inheritance-tab";
+import { InviteGateNotice } from "@/lib/invite-gate-notice";
 import { useT, useI18n } from "@/lib/i18n";
 
 export default function OnboardingPage() {
@@ -64,6 +65,7 @@ function OnboardingScreen() {
         </p>
 
         <InviterAcknowledgement />
+        <InviteGateNotice />
 
         <OnboardingForm size="mobile" />
 
