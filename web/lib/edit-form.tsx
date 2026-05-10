@@ -50,6 +50,7 @@ export function EditForm() {
   const router = useRouter();
   const [sealing, setSealing] = useState(false);
   const [stealthMeta, setStealthMeta] = useState("");
+  const [rotateAddr, setRotateAddr] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -95,6 +96,7 @@ export function EditForm() {
             setAvatar(tr.avatar ?? "");
             setSkills(decodeSkills(tr.skills));
             setStealthMeta(tr["stealth-meta-address"] ?? "");
+            setRotateAddr(tr["stealth-rotate-addr"] === "true");
           }
         }
       } catch (e) {
@@ -155,6 +157,9 @@ export function EditForm() {
         location,
         avatar,
         skills: JSON.stringify(skills.filter((s) => s.name.trim())),
+        // Rotation flag is only honored by the gateway when stealth-meta is
+        // also set. Persist regardless so the toggle state round-trips.
+        "stealth-rotate-addr": rotateAddr ? "true" : "false",
       };
       const res = await fetch("/api/update-profile", {
         method: "POST",
@@ -318,19 +323,49 @@ export function EditForm() {
             {t("edit.stealth.body")}
           </div>
           {stealthMeta ? (
-            <div style={{ padding: "12px 14px", border: "0.5px solid var(--gilded)", background: "var(--bone)" }}>
-              <div className="t-mono" style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--verdigris)", marginBottom: 6 }}>{t("edit.stealth.sealed")}</div>
-              <div className="t-mono" style={{ fontSize: 11, color: "var(--ink)", wordBreak: "break-all" }}>{stealthMeta}</div>
-              <button
-                type="button"
-                onClick={onSealStealth}
-                disabled={sealing}
-                className="t-display"
-                style={{ marginTop: 10, fontSize: 10, letterSpacing: "0.25em", color: "var(--ink-70)", background: "transparent", border: "none", cursor: sealing ? "wait" : "pointer", padding: 0 }}
+            <>
+              <div style={{ padding: "12px 14px", border: "0.5px solid var(--gilded)", background: "var(--bone)" }}>
+                <div className="t-mono" style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--verdigris)", marginBottom: 6 }}>{t("edit.stealth.sealed")}</div>
+                <div className="t-mono" style={{ fontSize: 11, color: "var(--ink)", wordBreak: "break-all" }}>{stealthMeta}</div>
+                <button
+                  type="button"
+                  onClick={onSealStealth}
+                  disabled={sealing}
+                  className="t-display"
+                  style={{ marginTop: 10, fontSize: 10, letterSpacing: "0.25em", color: "var(--ink-70)", background: "transparent", border: "none", cursor: sealing ? "wait" : "pointer", padding: 0 }}
+                >
+                  {sealing ? "…" : t("edit.stealth.reseal")}
+                </button>
+              </div>
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  padding: "12px 14px",
+                  marginTop: 10,
+                  border: "0.5px solid var(--gilded)",
+                  background: rotateAddr ? "rgba(82, 114, 96, 0.08)" : "transparent",
+                  cursor: "pointer",
+                }}
               >
-                {sealing ? "…" : t("edit.stealth.reseal")}
-              </button>
-            </div>
+                <input
+                  type="checkbox"
+                  checked={rotateAddr}
+                  onChange={(e) => setRotateAddr(e.target.checked)}
+                  style={{ marginTop: 3, flex: "0 0 auto", accentColor: "var(--vermilion)" }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="t-display" style={{ fontSize: 10, letterSpacing: "0.3em", color: rotateAddr ? "var(--verdigris)" : "var(--vermilion)", textTransform: "uppercase", marginBottom: 4 }}>
+                    {rotateAddr ? "ROTATING · ON" : "ROTATE PER RESOLUTION"}
+                  </div>
+                  <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", lineHeight: 1.5 }}>
+                    Every time someone resolves <code className="t-mono" style={{ fontSize: 12 }}>{myName.ens}</code> through ENS — MetaMask, Rainbow, Etherscan — they'll see a fresh stealth address derived from your meta-key. Your main wallet stays out of the on-chain trail. Funds land in a private bulletin only you can read.
+                  </div>
+                </div>
+              </label>
+            </>
           ) : (
             <button
               type="button"

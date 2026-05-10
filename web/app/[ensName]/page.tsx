@@ -16,6 +16,7 @@ import { ProfileHire } from "@/lib/profile-hire";
 import { InheritanceTab } from "@/lib/inheritance-tab";
 import { ReciprocateCartouche } from "@/lib/reciprocate-cartouche";
 import { VisitorOnly } from "@/lib/visitor-only";
+import { RotationWidget } from "@/lib/rotation-widget";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ interface ProfileData {
   sealedBy: string | null;
   isClaimed: boolean;
   hasStealth: boolean;
+  rotateAddr: boolean;
   hasOffers: boolean;
   stealthMeta: string | null;
   skills: StoredSkill[];
@@ -55,6 +57,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       sealedBy: null,
       isClaimed: false,
       hasStealth: false,
+      rotateAddr: false,
       hasOffers: false,
       stealthMeta: null,
       skills: [],
@@ -78,6 +81,8 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     sealedBy: record.text_records?.["sealed-by"] ?? null,
     isClaimed: true,
     hasStealth: !!record.text_records?.["stealth-meta-address"],
+    rotateAddr: record.text_records?.["stealth-rotate-addr"] === "true"
+      && !!record.text_records?.["stealth-meta-address"],
     hasOffers: decodeOffers(record.text_records?.offers).length > 0,
     stealthMeta: record.text_records?.["stealth-meta-address"] ?? null,
     skills: decodeSkills(record.text_records?.skills),
@@ -117,6 +122,23 @@ export default async function ProfilePage({
         <ReciprocateCartouche profileAddress={profile.address} />
       )}
     </>
+  );
+}
+
+/** Compact "stealth: rotating" chip that mirrors the SwarmBadge shape.
+ *  Visible whenever the profile has opted into per-resolution rotation —
+ *  the live address ticker lives in the RotationWidget below the action
+ *  buttons; this chip is just the at-a-glance signal. */
+function RotatingBadge() {
+  return (
+    <span
+      className="t-display"
+      style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--verdigris)", display: "inline-flex", alignItems: "center", gap: 6 }}
+      title="addr() rotates per resolution — every wallet that resolves this name sees a fresh stealth address"
+    >
+      <span style={{ width: 6, height: 6, background: "var(--verdigris)", borderRadius: "50%" }} />
+      STEALTH · ROTATING
+    </span>
   );
 }
 
@@ -342,6 +364,7 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
           </span>
           {profile.location && <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--ink-70)" }}>· {profile.location.toUpperCase()} ·</span>}
           {profile.swarmRef && <SwarmBadge swarmRef={profile.swarmRef} />}
+          {profile.rotateAddr && <RotatingBadge />}
         </div>
         {profile.sealedBy && (
           <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-50)", textAlign: "center", marginTop: 8, letterSpacing: "0.02em" }}>
@@ -362,6 +385,7 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
             </a>
           </VisitorOnly>
         </div>
+        {profile.rotateAddr && <RotationWidget label={profile.label} ens={profile.ens} />}
       </Cartouche>
 
       <OwnerPanel
@@ -454,6 +478,7 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
                 </div>
                 <a href={`/tip/${profile.ens}`} className="t-display" style={{ padding: "12px 22px", background: "var(--vermilion)", color: "var(--parchment)", fontSize: 12, letterSpacing: "0.3em", textDecoration: "none" }}>PRESS THE SEAL</a>
               </div>
+              {profile.rotateAddr && <RotationWidget label={profile.label} ens={profile.ens} />}
               <VisitorOnly ownerAddress={profile.address}>
                 <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", border: "0.5px solid var(--gilded)" }}>
                   <div style={{ flex: 1 }}>

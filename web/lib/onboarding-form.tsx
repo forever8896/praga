@@ -308,7 +308,12 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
             },
             body: JSON.stringify({
               label: name,
-              fields: { "stealth-meta-address": keys.metaAddress },
+              fields: {
+                "stealth-meta-address": keys.metaAddress,
+                // Default new users to rotating addr() — they're already
+                // setting up stealth, they want privacy. Toggle visible on /me/edit.
+                "stealth-rotate-addr": "true",
+              },
             }),
           }).catch(() => {});
         }
