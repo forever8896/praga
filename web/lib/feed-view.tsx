@@ -21,6 +21,7 @@ import type { FeedOffer, FeedPerson } from "./offers";
 import { normaliseSkillPrice } from "./offers";
 import type { SigilKind } from "./ornaments";
 import { useT } from "./i18n";
+import { useFx } from "./use-eth-czk";
 
 const FILTERS: Array<{ kind: SigilKind | "all"; label: string }> = [
   { kind: "all", label: "ALL" },
@@ -41,10 +42,10 @@ function timeAgo(unixSec: number): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function priceFor(offer: FeedOffer): string {
+function priceFor(offer: FeedOffer, fx: ReturnType<typeof useFx>): string {
   if (offer.source === "skill") return normaliseSkillPrice(offer.priceLabel);
   if (offer.type === "GIFT") return "Free";
-  return offer.kc > 0 ? `${offer.kc} Kč` : "—";
+  return offer.kc > 0 ? fx.pairFromKc(offer.kc) : "—";
 }
 
 /** A vendor card — used in OFFERINGS. Username is the headline (the social
@@ -70,7 +71,8 @@ function OfferingCard({
       : offer.type === "GIFT"
       ? "var(--verdigris)"
       : "var(--vermilion)";
-  const price = priceFor(offer);
+  const fx = useFx();
+  const price = priceFor(offer, fx);
   return (
     <Cartouche style={{ background: "var(--parchment)" }} padding={compact ? 16 : 20} tight={compact}>
       <div style={{ display: "flex", gap: compact ? 12 : 14, alignItems: "flex-start" }}>
@@ -151,7 +153,8 @@ function AskCard({
 }) {
   const username = offer.label;
   const display = offer.displayName ?? username.charAt(0).toUpperCase() + username.slice(1);
-  const budget = offer.kc > 0 ? `${offer.kc} Kč budget` : "open budget";
+  const fx = useFx();
+  const budget = offer.kc > 0 ? `${fx.pairFromKc(offer.kc)} budget` : "open budget";
   return (
     <Cartouche style={{ background: "var(--parchment)" }} padding={compact ? 16 : 20} tight={compact}>
       <div style={{ display: "flex", gap: compact ? 12 : 14, alignItems: "flex-start" }}>

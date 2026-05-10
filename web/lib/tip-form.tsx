@@ -12,7 +12,7 @@
 // stealth-meta-address text record. No on-chain link to either name.
 import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useAccessToken } from "./use-access-token";
-import { useEthCzkRate } from "./use-eth-czk";
+import { useFx } from "./use-eth-czk";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, WaxSeal } from "./ornaments";
@@ -71,7 +71,7 @@ const TIP_ABI = [
 export function TipForm({ recipient }: { recipient: Recipient }) {
   const { ready, authenticated, login, user } = usePrivy();
   const { accessToken: identityToken } = useAccessToken();
-  const kcPerEth = useEthCzkRate();
+  const fx = useFx();
   const t = useT();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
@@ -236,24 +236,50 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
         return;
       }
 
-      // Active wallet — the embedded Privy wallet for this hackathon.
-      const wallet = wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
-      if (wallet) {
-        try {
-          await wallet.switchChain(env.defaultChainId);
-        } catch {
-          /* ignore — Privy may auto-switch */
-        }
+      // Pick the wallet matching the user's primary address — embedded for
+      // email/google logins, MetaMask/Rainbow/etc for self-custody logins.
+      // Privy's `useSendTransaction` is embedded-only ("No embedded or
+      // connected wallet found for address"), so for externals we drop down
+      // to the wallet's EIP-1193 provider.
+      const wallet =
+        wallets.find((w) => myAddress && w.address.toLowerCase() === myAddress.toLowerCase()) ??
+        wallets.find((w) => w.walletClientType === "privy") ??
+        wallets[0];
+      if (!wallet) {
+        setErr("no wallet connected");
+        return;
+      }
+      try {
+        await wallet.switchChain(env.defaultChainId);
+      } catch {
+        /* ignore — Privy may auto-switch */
       }
 
-      const result = await sendTransaction({
-        to: tipAddr as `0x${string}`,
-        value,
-        data,
-        chainId: env.defaultChainId,
-      });
+      let txHash: `0x${string}`;
+      if (wallet.walletClientType === "privy") {
+        const result = await sendTransaction({
+          to: tipAddr as `0x${string}`,
+          value,
+          data,
+          chainId: env.defaultChainId,
+        });
+        txHash = result.hash;
+      } else {
+        const provider = await wallet.getEthereumProvider();
+        txHash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [
+            {
+              from: wallet.address,
+              to: tipAddr,
+              value: `0x${value.toString(16)}`,
+              data,
+            },
+          ],
+        })) as `0x${string}`;
+      }
 
-      router.push(`/r/${result.hash}?stealth=${stealthRecipient}`);
+      router.push(`/r/${txHash}?stealth=${stealthRecipient}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "tip-failed");
     } finally {
@@ -365,7 +391,7 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
               style={{ width: "100%", padding: "10px 12px", background: "transparent", border: "0.5px solid var(--gilded)", fontFamily: "var(--mono)", fontSize: 18, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
             />
             <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-70)", marginTop: 4 }}>
-              ≈ {Math.max(0, Math.round(Number.parseFloat(amountEth || "0") * kcPerEth)).toLocaleString("cs-CZ")} Kč {t("tip.amountHint")}
+              ≈ {fx.formatFromEth(Number.parseFloat(amountEth || "0"))} {t("tip.amountHint")}
             </div>
           </div>
 

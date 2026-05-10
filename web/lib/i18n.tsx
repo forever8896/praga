@@ -43,7 +43,6 @@ const DICT: Dict = {
   "nav.compose": { en: "Post an offer", cs: "Vyvěsit nabídku" },
   "nav.edit": { en: "Edit your seal", cs: "Upravit pečeť" },
   "nav.wallet": { en: "Ledger", cs: "Kniha" },
-  "nav.familiar": { en: "Familiar", cs: "Familiár" },
   "nav.signin": { en: "SIGN IN", cs: "PŘIHLÁSIT" },
   "nav.signout": { en: "SIGN OUT", cs: "ODHLÁSIT" },
 
@@ -218,7 +217,7 @@ const DICT: Dict = {
   "compose.youGive": { en: "YOU OFFER FREELY —", cs: "DÁVÁTE ZDARMA —" },
   "compose.sayMore": { en: "SAY MORE —", cs: "POVĚZTE VÍC —" },
   "compose.underSign": { en: "UNDER WHICH SIGN —", cs: "POD JAKÝM ZNAKEM —" },
-  "compose.forWork": { en: "FOR THE WORK — Kč", cs: "ZA PRÁCI — Kč" },
+  "compose.forWork": { en: "FOR THE WORK — USD", cs: "ZA PRÁCI — Kč" },
   "compose.where": { en: "WHERE — neighbourhood", cs: "KDE — čtvrť" },
   "compose.button.seal": { en: "SEAL & POST", cs: "ZAPEČETIT A VYVĚSIT" },
 

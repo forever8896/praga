@@ -1,15 +1,18 @@
-// GET /api/eth-czk — Kč per 1 ETH, fetched from CoinGecko and cached 60s.
-// Public, no auth — both the wallet page and the tip form read it.
+// GET /api/eth-czk — ETH→fiat rates (CZK + USD), CoinGecko-backed, cached 60s.
+// Public, no auth — wallet page, tip form, feed, compose all read it.
+//
+// Response shape includes both rates so the client can pick CZK or USD by
+// the user's i18n language without a second round-trip.
 import { NextResponse } from "next/server";
-import { getEthCzkRate } from "@/lib/eth-czk";
+import { getEthFxRates } from "@/lib/eth-czk";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
 
 export async function GET() {
-  const rate = await getEthCzkRate();
+  const rates = await getEthFxRates();
   return NextResponse.json(
-    { kcPerEth: rate, at: Date.now() },
+    { kcPerEth: rates.kcPerEth, usdPerEth: rates.usdPerEth, at: Date.now() },
     { headers: { "cache-control": "public, max-age=60, s-maxage=60" } },
   );
 }

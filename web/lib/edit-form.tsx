@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, AlchemicalSigil, type SigilKind } from "./ornaments";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
-import { useT } from "./i18n";
+import { useT, useI18n } from "./i18n";
 
 interface Skill {
   kind: SigilKind;
@@ -47,6 +47,8 @@ export function EditForm() {
   const { accessToken: identityToken } = useAccessToken();
   const { signMessage } = useSignMessage();
   const t = useT();
+  const { lang } = useI18n();
+  const skillPricePlaceholder = lang === "en" ? "from $20 / hr" : "od 200 Kč / hod";
   const router = useRouter();
   const [sealing, setSealing] = useState(false);
   const [stealthMeta, setStealthMeta] = useState("");
@@ -300,6 +302,7 @@ export function EditForm() {
               <SkillRow
                 key={i}
                 skill={s}
+                pricePlaceholder={skillPricePlaceholder}
                 onChange={(next) =>
                   setSkills((curr) => curr.map((x, j) => (j === i ? next : x)))
                 }
@@ -451,7 +454,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function SkillRow({ skill, onChange, onRemove }: { skill: Skill; onChange: (s: Skill) => void; onRemove: () => void }) {
+function SkillRow({ skill, onChange, onRemove, pricePlaceholder }: { skill: Skill; onChange: (s: Skill) => void; onRemove: () => void; pricePlaceholder: string }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 140px auto", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "0.5px solid var(--gilded)" }}>
       <select
@@ -474,7 +477,7 @@ function SkillRow({ skill, onChange, onRemove }: { skill: Skill; onChange: (s: S
         value={skill.price}
         onChange={(e) => onChange({ ...skill, price: e.target.value.slice(0, 40) })}
         style={{ ...inputStyle, padding: "6px 8px", textAlign: "right" }}
-        placeholder="from 200 Kč"
+        placeholder={pricePlaceholder}
       />
       <button type="button" onClick={onRemove} className="t-mono" style={{ fontSize: 11, color: "var(--vermilion)", background: "transparent", border: "none", cursor: "pointer", padding: "4px 8px" }}>×</button>
     </div>

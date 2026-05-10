@@ -15,6 +15,7 @@ import {
 } from "./ornaments";
 import { decodeOffers, encodeOffers, type OfferType, type StoredOffer } from "./offers";
 import { useT } from "./i18n";
+import { useFx } from "./use-eth-czk";
 
 interface MyName {
   claimed: boolean;
@@ -39,6 +40,7 @@ export function ComposeForm() {
   const { ready, authenticated, login } = usePrivy();
   const { accessToken: identityToken } = useAccessToken();
   const t = useT();
+  const fx = useFx();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,16 @@ export function ComposeForm() {
     setSaving(true);
     setErr(null);
     try {
-      const kcNum = Math.max(0, Math.min(99999, Number.parseInt(kc, 10) || 0));
+      // Input is interpreted as the user's local currency: Kč in cs, USD in en.
+      // We always normalise to Kč for storage so display logic (fx.pairFromKc)
+      // can render the same offer in either language going forward. The
+      // conversion uses the live ETH→fiat rates so a $100 ask gets stored as
+      // its CZK equivalent at the rate at posting time.
+      const inputNum = Math.max(0, Math.min(99999, Number.parseInt(kc, 10) || 0));
+      const kcNum =
+        fx.code === "USD"
+          ? Math.round((inputNum * fx.kcPerEth) / fx.usdPerEth)
+          : inputNum;
       const usdc = Math.round(kcNum / 28); // demo conversion 1 USDC ≈ 28 Kč
       const newOffer: StoredOffer = {
         id: `o${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
@@ -279,6 +290,13 @@ export function ComposeForm() {
                   max={99999}
                   style={inputStyle}
                 />
+                {kc && Number.parseInt(kc, 10) > 0 && (
+                  <div className="t-italic" style={{ fontSize: 11, color: "var(--ink-70)", marginTop: 4 }}>
+                    {fx.code === "USD"
+                      ? `≈ ${(Number.parseInt(kc, 10) / fx.usdPerEth).toFixed(4)} ETH`
+                      : `≈ ${(Number.parseInt(kc, 10) / fx.kcPerEth).toFixed(4)} ETH`}
+                  </div>
+                )}
               </Field>
               <Field label={t("compose.where")}>
                 <input
@@ -335,7 +353,7 @@ export function ComposeForm() {
                     <div className="t-display" style={{ fontSize: 9, letterSpacing: "0.25em", color: "var(--vermilion)" }}>{o.type}</div>
                     <div className="t-body" style={{ fontSize: 14, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.title}</div>
                   </div>
-                  <div className="t-display" style={{ fontSize: 13, color: "var(--ink-70)" }}>{o.type === "GIFT" ? "free" : `${o.kc} Kč`}</div>
+                  <div className="t-display" style={{ fontSize: 13, color: "var(--ink-70)" }}>{o.type === "GIFT" ? "free" : fx.pairFromKc(o.kc)}</div>
                   <button type="button" onClick={() => onDelete(o.id)} style={{ background: "transparent", border: "none", color: "var(--vermilion)", fontSize: 18, cursor: "pointer", padding: "4px 8px" }}>×</button>
                 </div>
               ))}

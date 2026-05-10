@@ -61,7 +61,6 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
     { href: "/compose", label: t("nav.compose"), show: "auth" },
     { href: "/wallet", label: t("nav.wallet"), show: "auth" },
     { href: "/me/edit", label: t("nav.edit"), show: "auth" },
-    { href: "/agent", label: t("nav.familiar"), show: "auth" },
   ];
 
   const bgRule = variant === "transparent" ? "transparent" : "var(--parchment)";

@@ -5,7 +5,7 @@
 // excluding the stealth-recipient blind spot — by design).
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccessToken } from "./use-access-token";
-import { useEthCzkRate } from "./use-eth-czk";
+import { useFx } from "./use-eth-czk";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -51,12 +51,6 @@ interface MyName {
   text_records?: Record<string, string>;
 }
 
-function ethToKc(ethStr: string, kcPerEth: number): number {
-  const eth = Number.parseFloat(ethStr);
-  if (!Number.isFinite(eth)) return 0;
-  return Math.round(eth * kcPerEth);
-}
-
 function shortAddr(a: string): string {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
@@ -65,7 +59,7 @@ export function WalletView() {
   const { ready, authenticated, login, user } = usePrivy();
   const { accessToken: identityToken } = useAccessToken();
   const t = useT();
-  const kcPerEth = useEthCzkRate();
+  const fx = useFx();
 
   const address = user?.wallet?.address as `0x${string}` | undefined;
 
@@ -125,10 +119,8 @@ export function WalletView() {
     return Number(balanceWei) / 1e18;
   }, [balanceWei]);
 
-  const balanceKc = balanceEth !== null ? Math.round(balanceEth * kcPerEth) : null;
-
-  const totalReceivedKc = received.reduce((sum, r) => sum + ethToKc(r.amountEth, kcPerEth), 0);
-  const totalSentKc = sent.reduce((sum, r) => sum + ethToKc(r.amountEth, kcPerEth), 0);
+  const totalReceivedEth = received.reduce((sum, r) => sum + (Number.parseFloat(r.amountEth) || 0), 0);
+  const totalSentEth = sent.reduce((sum, r) => sum + (Number.parseFloat(r.amountEth) || 0), 0);
   const hasStealth = !!myName?.text_records?.["stealth-meta-address"];
 
   if (!ready) {
@@ -169,26 +161,26 @@ export function WalletView() {
                   label={t("wallet.balance")}
                   amount={balanceEth !== null ? balanceEth.toFixed(5) : "—"}
                   unit="ETH"
-                  sub={balanceKc !== null ? `≈ ${balanceKc.toLocaleString("cs-CZ")} Kč` : ""}
+                  sub={balanceEth !== null ? `≈ ${fx.formatFromEth(balanceEth)}` : ""}
                 />
                 <Stat
                   label={t("wallet.received")}
-                  amount={totalReceivedKc.toLocaleString("cs-CZ")}
-                  unit="Kč"
-                  sub={`${received.length} ${t("profile.wallSealed")}`}
+                  amount={totalReceivedEth.toFixed(5)}
+                  unit="ETH"
+                  sub={`≈ ${fx.formatFromEth(totalReceivedEth)} · ${received.length} ${t("profile.wallSealed")}`}
                   accent="var(--verdigris)"
                 />
                 <Stat
                   label={t("wallet.given")}
-                  amount={totalSentKc.toLocaleString("cs-CZ")}
-                  unit="Kč"
-                  sub={`${sent.length} ${t("profile.wallSealed")}`}
+                  amount={totalSentEth.toFixed(5)}
+                  unit="ETH"
+                  sub={`≈ ${fx.formatFromEth(totalSentEth)} · ${sent.length} ${t("profile.wallSealed")}`}
                   accent="var(--vermilion)"
                 />
               </div>
               <div className="hr-gilded" style={{ margin: "20px 0 12px" }} />
               <div className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)" }}>
-                {address && <>account · <code>{shortAddr(address)}</code></>} · {chainLabel(env.defaultChainId)} · 1 ETH ≈ {Math.round(kcPerEth).toLocaleString("cs-CZ")} Kč (live · CoinGecko)
+                {address && <>account · <code>{shortAddr(address)}</code></>} · {chainLabel(env.defaultChainId)} · {fx.rateLine()}
               </div>
               {hasStealth && (
                 <div className="t-italic" style={{ fontSize: 12, color: "var(--ink-70)", marginTop: 6, lineHeight: 1.5 }}>
@@ -233,7 +225,7 @@ export function WalletView() {
                   {[...received.map((r) => ({ r, kind: "received" as const })), ...sent.map((r) => ({ r, kind: "sent" as const }))]
                     .sort((a, b) => Number(BigInt(b.r.blockNumber) - BigInt(a.r.blockNumber)))
                     .map(({ r, kind }) => (
-                      <LedgerRow key={`${kind}:${r.txHash}`} r={r} kind={kind} kcPerEth={kcPerEth} />
+                      <LedgerRow key={`${kind}:${r.txHash}`} r={r} kind={kind} fx={fx} />
                     ))}
                 </div>
               )}
@@ -245,11 +237,12 @@ export function WalletView() {
   );
 }
 
-function LedgerRow({ r, kind, kcPerEth }: { r: RawReceipt; kind: "sent" | "received"; kcPerEth: number }) {
+function LedgerRow({ r, kind, fx }: { r: RawReceipt; kind: "sent" | "received"; fx: ReturnType<typeof useFx> }) {
   const counterparty = kind === "sent" ? r.recipientEns ?? shortAddr(r.stealthRecipient) : r.fromEns ?? shortAddr(r.from);
   const sigilKind = kind === "sent" ? "venus" : "caduceus";
   const sign = kind === "received" ? "+" : "−";
   const accent = kind === "received" ? "var(--verdigris)" : "var(--vermilion)";
+  const ethAmount = Number.parseFloat(r.amountEth) || 0;
   return (
     <Link href={`/r/${r.txHash}`} style={{ textDecoration: "none", color: "inherit" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 0", borderBottom: "0.5px solid var(--gilded)" }}>
@@ -269,7 +262,7 @@ function LedgerRow({ r, kind, kcPerEth }: { r: RawReceipt; kind: "sent" | "recei
         </div>
         <div style={{ textAlign: "right" }}>
           <div className="t-display" style={{ fontSize: 16, color: accent, letterSpacing: "0.04em" }}>
-            {sign} {ethToKc(r.amountEth, kcPerEth).toLocaleString("cs-CZ")} Kč
+            {sign} {fx.formatFromEth(ethAmount)}
           </div>
           <div className="t-mono" style={{ fontSize: 10, color: "var(--ink-70)" }}>{r.amountEth} ETH</div>
         </div>
