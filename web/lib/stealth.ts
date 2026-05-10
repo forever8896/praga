@@ -21,6 +21,7 @@ import {
 import {
   generateStealthAddress,
   VALID_SCHEME_ID,
+  computeStealthKey,
 } from "@scopelift/stealth-address-sdk";
 
 /**
@@ -125,6 +126,43 @@ export function metaAddressToWorkerKey(meta: string): `0x${string}` {
   const hex = meta.slice("st:eth:0x".length);
   if (hex.length !== 132) throw new Error("invalid meta-address payload length");
   return publicKeyToEthAddress(`0x${hex.slice(0, 66)}`);
+}
+
+/** Compute the spending privkey for a stealth address that was derived from
+ *  the user's meta-address with the given ephemeral pubkey. ERC-5564 §3:
+ *    stealthPriv = (spendingPriv + hash(ECDH(viewingPriv, ephemeralPub))) mod n
+ *  Wraps ScopeLift's helper so callers don't need the raw schemeId enum. */
+export function deriveStealthSpendingKey(
+  spendingPrivateKey: `0x${string}`,
+  viewingPrivateKey: `0x${string}`,
+  ephemeralPublicKey: `0x${string}`,
+): `0x${string}` {
+  return computeStealthKey({
+    ephemeralPublicKey,
+    schemeId: VALID_SCHEME_ID.SCHEME_ID_1,
+    spendingPrivateKey,
+    viewingPrivateKey,
+  }) as `0x${string}`;
+}
+
+/** Domain marker for the per-user "vault" key. Distinct from the stealth
+ *  message so the two keys don't collide. The vault is a deterministic
+ *  EOA derived in-browser only — it never appears as plaintext anywhere
+ *  except the user's own session. */
+export const PRAGUECONNECT_VAULT_DOMAIN = "pragueconnect.vault.v1";
+export const PRAGUECONNECT_VAULT_MESSAGE = `Sign to derive your private vault address on PragueConnect.\n\nDomain: ${PRAGUECONNECT_VAULT_DOMAIN}\nThis signature only derives a vault key — it sends no funds.`;
+
+/** Derive the user's vault privkey + address from a deterministic signature
+ *  over PRAGUECONNECT_VAULT_MESSAGE. Same wallet → same vault, every session,
+ *  no persistence needed. The address only enters the chain when the vault
+ *  receives or sends; it is never published in any text record. */
+export function deriveVaultKey(signature: `0x${string}`): { privateKey: `0x${string}`; address: `0x${string}` } {
+  // Map the 65-byte sig to a 32-byte scalar via keccak so the privkey lands
+  // inside the curve order without needing a manual mod-n step.
+  const privateKey = keccak256(signature) as `0x${string}`;
+  const compressedPub = privateKeyToCompressedPublic(privateKey);
+  const address = publicKeyToEthAddress(compressedPub);
+  return { privateKey, address };
 }
 
 function hexToBytes(hex: string): Uint8Array {

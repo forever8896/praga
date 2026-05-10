@@ -16,6 +16,7 @@ import {
 } from "./ornaments";
 import { useT } from "./i18n";
 import { env } from "./env";
+import { StealthInbox } from "./stealth-inbox";
 
 function chainLabel(chainId: number): string {
   if (chainId === 8453) return "base mainnet";
@@ -45,6 +46,7 @@ interface ReceiptsResponse {
 
 interface MyName {
   claimed: boolean;
+  label?: string;
   ens?: string;
   text_records?: Record<string, string>;
 }
@@ -204,6 +206,10 @@ export function WalletView() {
             {myName?.ens && address && (
               <ReceivePill ens={myName.ens} address={address} chainId={env.defaultChainId} />
             )}
+
+            {/* Private receipts + vault + key-custody — bulletin reader,
+                stealth-balance scan, sweep-to-vault, embedded-wallet export */}
+            <StealthInbox ensLabel={myName?.label ?? null} mainAddress={address ?? null} />
 
             {err && (
               <div className="t-italic" style={{ fontSize: 13, color: "var(--vermilion)", textAlign: "center", marginTop: 14 }}>
