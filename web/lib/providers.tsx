@@ -25,13 +25,15 @@ export function Providers({ children }: { children: ReactNode }) {
     <I18nProvider><PrivyProvider
       appId={env.privyAppId}
       config={{
-        loginMethods: ["email", "google"],
+        loginMethods: ["email", "google", "wallet"],
         appearance: {
           theme: "light",
           accentColor: "#B23A2F",
           logo: undefined,
           // Skol palette pushed into Privy's modal so it doesn't break the parchment vibe.
+          // Email-first by default — wallet is offered for users who already self-custody.
           showWalletLoginFirst: false,
+          walletList: ["metamask", "rainbow", "coinbase_wallet", "wallet_connect", "rabby_wallet"],
         },
         embeddedWallets: {
           // Auto-create an embedded wallet for every signed-in user (Privy v3 shape).
