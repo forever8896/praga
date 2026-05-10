@@ -366,8 +366,18 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
                   >
                     {dripping ? "…" : "TOP ME UP"}
                   </button>
-                  <a href="https://www.alchemy.com/faucets/base-sepolia" target="_blank" rel="noreferrer" className="t-display" style={{ fontSize: 10, letterSpacing: "0.25em", color: "var(--vermilion)", textDecoration: "none", borderBottom: "0.5px solid var(--vermilion)", paddingBottom: 1 }}>
-                    {t("tip.faucet")}
+                  <a
+                    href={
+                      env.defaultChainId === 8453
+                        ? "https://bridge.base.org/deposit"
+                        : "https://www.alchemy.com/faucets/base-sepolia"
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="t-display"
+                    style={{ fontSize: 10, letterSpacing: "0.25em", color: "var(--vermilion)", textDecoration: "none", borderBottom: "0.5px solid var(--vermilion)", paddingBottom: 1 }}
+                  >
+                    {env.defaultChainId === 8453 ? "BRIDGE TO BASE" : t("tip.faucet")}
                   </a>
                 </div>
               )}

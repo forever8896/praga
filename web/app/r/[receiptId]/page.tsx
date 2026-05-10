@@ -4,11 +4,14 @@
 import { Cartouche, FleurDeLis } from "@/lib/ornaments";
 import { env } from "@/lib/env";
 import { createPublicClient, http, decodeEventLog } from "viem";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+// v2 Tipped event: memo is now `bytes32 memoHash` (keccak commitment).
+// Plaintext lives off-chain; this page renders the hash truncated rather
+// than trying to surface a meaningless string.
 const TIP_EVENT_ABI = [
   {
     type: "event",
@@ -19,7 +22,7 @@ const TIP_EVENT_ABI = [
       { name: "amount", type: "uint256", indexed: false },
       { name: "ephemeralPubKey", type: "bytes", indexed: false },
       { name: "viewTag", type: "bytes1", indexed: false },
-      { name: "memo", type: "string", indexed: false },
+      { name: "memoHash", type: "bytes32", indexed: false },
     ],
   },
 ] as const;
@@ -30,16 +33,21 @@ interface ReceiptData {
   from?: `0x${string}`;
   stealth?: `0x${string}`;
   amountEth?: string;
-  memo?: string;
+  memoHash?: `0x${string}`;
   blockNumber?: bigint;
 }
+
+const onMainnet = env.defaultChainId === base.id;
+const explorerBase = onMainnet ? "https://basescan.org" : "https://sepolia.basescan.org";
 
 async function loadReceipt(id: string): Promise<ReceiptData> {
   if (!/^0x[a-fA-F0-9]{64}$/.test(id)) {
     return { txHash: null, status: "missing" };
   }
   const txHash = id as `0x${string}`;
-  const client = createPublicClient({ chain: baseSepolia, transport: http(env.baseSepoliaRpcUrl) });
+  const chain = onMainnet ? base : baseSepolia;
+  const rpc = onMainnet ? env.baseRpcUrl : env.baseSepoliaRpcUrl;
+  const client = createPublicClient({ chain, transport: http(rpc) });
   try {
     const receipt = await client.getTransactionReceipt({ hash: txHash });
     if (!receipt) return { txHash, status: "pending" };
@@ -51,7 +59,7 @@ async function loadReceipt(id: string): Promise<ReceiptData> {
             from: `0x${string}`;
             stealthRecipient: `0x${string}`;
             amount: bigint;
-            memo: string;
+            memoHash: `0x${string}`;
           };
           return {
             txHash,
@@ -59,7 +67,7 @@ async function loadReceipt(id: string): Promise<ReceiptData> {
             from: a.from,
             stealth: a.stealthRecipient,
             amountEth: (Number(a.amount) / 1e18).toFixed(6),
-            memo: a.memo,
+            memoHash: a.memoHash,
             blockNumber: receipt.blockNumber,
           };
         }
@@ -101,7 +109,7 @@ export default async function ReceiptPage({
         <Cartouche padding={28}>
           {data.status === "missing" && (
             <div className="t-italic" style={{ fontSize: 15, color: "var(--ink-70)", textAlign: "center", lineHeight: 1.55 }}>
-              The receipt id <code className="t-mono">{receiptId}</code> doesn't look like a Base Sepolia transaction hash.
+              The receipt id <code className="t-mono">{receiptId}</code> doesn't look like a {onMainnet ? "Base" : "Base Sepolia"} transaction hash.
             </div>
           )}
 
@@ -111,7 +119,7 @@ export default async function ReceiptPage({
                 Waiting for the gift to land in a block. Refresh in a moment.
               </div>
               <a
-                href={`https://sepolia.basescan.org/tx/${receiptId}`}
+                href={`${explorerBase}/tx/${receiptId}`}
                 target="_blank"
                 rel="noreferrer"
                 className="t-mono"
@@ -127,7 +135,9 @@ export default async function ReceiptPage({
               <Row label="FROM" value={data.from ?? "?"} mono />
               <Row label="STEALTH RECIPIENT" value={stealth ?? "(not in this receipt)"} mono accent="var(--verdigris)" />
               <Row label="AMOUNT" value={`${data.amountEth ?? "?"} ETH`} accent="var(--vermilion)" />
-              {data.memo && <Row label="WORD WITH IT" value={data.memo} italic />}
+              {data.memoHash && data.memoHash !== "0x0000000000000000000000000000000000000000000000000000000000000000" && (
+                <Row label="MEMO COMMITMENT" value={`${data.memoHash.slice(0, 14)}…${data.memoHash.slice(-8)}`} mono />
+              )}
               {data.blockNumber !== undefined && <Row label="BLOCK" value={data.blockNumber.toString()} mono />}
 
               <div className="hr-gilded" style={{ margin: "18px 0" }} />
@@ -139,7 +149,7 @@ export default async function ReceiptPage({
 
               <div style={{ marginTop: 18, display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <a
-                  href={`https://sepolia.basescan.org/tx/${data.txHash}`}
+                  href={`${explorerBase}/tx/${data.txHash}`}
                   target="_blank"
                   rel="noreferrer"
                   className="t-display"
@@ -149,7 +159,7 @@ export default async function ReceiptPage({
                 </a>
                 {stealth && (
                   <a
-                    href={`https://sepolia.basescan.org/address/${stealth}`}
+                    href={`${explorerBase}/address/${stealth}`}
                     target="_blank"
                     rel="noreferrer"
                     className="t-display"

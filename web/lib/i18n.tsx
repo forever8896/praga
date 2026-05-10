@@ -23,7 +23,7 @@ const DICT: Dict = {
     en: "The name is the seal. The seal is the person. Reputation will be yours, not ours.",
     cs: "Jméno je pečeť. Pečeť je člověk. Reputace bude patřit vám, ne nám.",
   },
-  "home.assurances": { en: "NON-CUSTODIAL · END-TO-END SEALED · KČ FIRST", cs: "NON-CUSTODIAL · ZAPEČETĚNO OD KONCE KE KONCI · KČ NA PRVNÍM MÍSTĚ" },
+  "home.assurances": { en: "NON-CUSTODIAL · END-TO-END SEALED · LOCAL CURRENCY FIRST", cs: "NON-CUSTODIAL · ZAPEČETĚNO OD KONCE KE KONCI · KČ NA PRVNÍM MÍSTĚ" },
   "home.browse": { en: "or browse the town square →", cs: "nebo se podívejte na náměstí →" },
   "home.hero.kicker": { en: "Inscription", cs: "Zápis" },
 
@@ -85,8 +85,8 @@ const DICT: Dict = {
 
   // Tip
   "tip.kicker": { en: "SEND A SEALED GIFT", cs: "POSLAT ZAPEČETĚNÝ DAR" },
-  "tip.amount": { en: "AMOUNT — ETH ON BASE SEPOLIA", cs: "ČÁSTKA — ETH NA BASE SEPOLIA" },
-  "tip.amountHint": { en: "testnet ETH only · 0.001 ETH ≈ a token of thanks", cs: "pouze testnet ETH · 0.001 ETH ≈ symbolický dík" },
+  "tip.amount": { en: "AMOUNT — ETH ON BASE", cs: "ČÁSTKA — ETH NA BASE" },
+  "tip.amountHint": { en: "0.001 ETH ≈ a token of thanks", cs: "0.001 ETH ≈ symbolický dík" },
   "tip.memo": { en: "A WORD WITH IT (optional, on-chain)", cs: "SLOVO K NĚMU (nepovinné, on-chain)" },
   "tip.memoPlaceholder": { en: "With thanks for the bicycle.", cs: "S díky za kolo." },
   "tip.button.sign": { en: "SIGN IN TO SEAL THE GIFT", cs: "PŘIHLÁSIT SE A ZAPEČETIT" },
@@ -234,8 +234,8 @@ const DICT: Dict = {
   "crops.cr.kicker": { en: "FIRST MARK · BROKEN CHAIN", cs: "PRVNÍ ZNAK · ZLÁMANÝ ŘETĚZ" },
   "crops.cr.title": { en: "Censorship-resistant", cs: "Odolné cenzuře" },
   "crops.cr.body": {
-    en: "Your page lives on Swarm and resolves through ENS. No company can take it down — not even us. The address of the page is yours.",
-    cs: "Vaše stránka žije na Swarmu a překládá se přes ENS. Žádná firma ji nemůže stáhnout — ani my. Adresa stránky patří vám.",
+    en: "Your page lives on IPFS and resolves through ENS. No company can take it down — not even us. The address of the page is yours.",
+    cs: "Vaše stránka žije na IPFS a překládá se přes ENS. Žádná firma ji nemůže stáhnout — ani my. Adresa stránky patří vám.",
   },
   "crops.os.kicker": { en: "SECOND MARK · UNFOLDED SCROLL", cs: "DRUHÝ ZNAK · ROZBALENÝ SVITEK" },
   "crops.os.title": { en: "Open as a seal", cs: "Otevřené jako pečeť" },

@@ -17,6 +17,8 @@ import { InheritanceTab } from "@/lib/inheritance-tab";
 import { ReciprocateCartouche } from "@/lib/reciprocate-cartouche";
 import { VisitorOnly } from "@/lib/visitor-only";
 import { RotationWidget } from "@/lib/rotation-widget";
+import { contenthashToCidV0 } from "@/lib/ipfs";
+import { SkillPrice } from "@/lib/skill-price";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -37,8 +39,8 @@ interface ProfileData {
   skills: StoredSkill[];
   receiptsSent: TipReceipt[];
   receiptsReceived: TipReceipt[];
-  /** Swarm bzz reference (32-byte hex) decoded from the subname's contenthash, if any. */
-  swarmRef: string | null;
+  /** IPFS CIDv0 (Qm…) decoded from the subname's contenthash, if any. */
+  ipfsCid: string | null;
 }
 
 async function loadProfile(rawName: string): Promise<ProfileData> {
@@ -63,7 +65,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       skills: [],
       receiptsSent: [],
       receiptsReceived: [],
-      swarmRef: null,
+      ipfsCid: null,
     };
   }
   const display = record.text_records?.name ?? label.charAt(0).toUpperCase() + label.slice(1);
@@ -88,19 +90,8 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     skills: decodeSkills(record.text_records?.skills),
     receiptsSent,
     receiptsReceived,
-    swarmRef: extractSwarmRef(record.contenthash),
+    ipfsCid: contenthashToCidV0(record.contenthash),
   };
-}
-
-/** Decode an ENSIP-7 Swarm contenthash back to its 32-byte bzz reference.
- *  The fixed prefix is 0xe40101fa011b20 (swarm-ns / CIDv1 / swarm-manifest /
- *  keccak256-32). Anything else returns null. */
-function extractSwarmRef(contenthash: string | null | undefined): string | null {
-  if (!contenthash) return null;
-  const hex = contenthash.startsWith("0x") ? contenthash.slice(2) : contenthash;
-  if (hex.length !== 78) return null; // 7 prefix + 32 ref = 39 bytes = 78 hex chars
-  if (!hex.toLowerCase().startsWith("e40101fa011b20")) return null;
-  return hex.slice(14);
 }
 
 export default async function ProfilePage({
@@ -142,13 +133,13 @@ function RotatingBadge() {
   );
 }
 
-/** "served from Swarm" badge. Compact chip variant for the mobile chip strip;
- *  inline variant for the desktop seal block. Both link to a public Swarm
+/** "served from IPFS" badge. Compact chip variant for the mobile chip strip;
+ *  inline variant for the desktop seal block. Both link to a public IPFS
  *  gateway so anyone (including someone reading this on the .limo page) can
  *  fetch the same content without trusting our app. */
-function SwarmBadge({ swarmRef, inline = false }: { swarmRef: string; inline?: boolean }) {
-  const href = `https://api.gateway.ethswarm.org/bzz/${swarmRef}/`;
-  const short = `bzz://${swarmRef.slice(0, 6)}…${swarmRef.slice(-4)}`;
+function IpfsBadge({ cid, inline = false }: { cid: string; inline?: boolean }) {
+  const href = `https://ipfs.io/ipfs/${cid}/`;
+  const short = `${cid.slice(0, 6)}…${cid.slice(-4)}`;
   if (inline) {
     return (
       <a
@@ -157,9 +148,9 @@ function SwarmBadge({ swarmRef, inline = false }: { swarmRef: string; inline?: b
         rel="noreferrer"
         className="t-mono"
         style={{ fontSize: 12, color: "var(--ink-70)", textDecoration: "none", borderBottom: "0.5px dotted var(--gilded)" }}
-        title={`Swarm reference: ${swarmRef}`}
+        title={`IPFS CID: ${cid}`}
       >
-        Swarm · {short}
+        IPFS · {short}
       </a>
     );
   }
@@ -170,10 +161,10 @@ function SwarmBadge({ swarmRef, inline = false }: { swarmRef: string; inline?: b
       rel="noreferrer"
       className="t-display"
       style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--verdigris)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
-      title={`Swarm reference: ${swarmRef}`}
+      title={`IPFS CID: ${cid}`}
     >
       <span style={{ width: 6, height: 6, background: "var(--verdigris)", borderRadius: "50%" }} />
-      SERVED FROM SWARM
+      SERVED FROM IPFS
     </a>
   );
 }
@@ -233,8 +224,8 @@ function SkillRow({ skill, label, compact, ownerAddress }: { skill: StoredSkill;
           {skill.name}
         </div>
         {skill.price && (
-          <div className="t-italic" style={{ fontSize: compact ? 12 : 13, color: "var(--ink-70)", marginTop: 2 }}>
-            {skill.price}
+          <div style={{ marginTop: 2 }}>
+            <SkillPrice raw={skill.price} fontSize={compact ? 12 : 13} />
           </div>
         )}
       </div>
@@ -363,7 +354,7 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
             VERIFIED HUMAN
           </span>
           {profile.location && <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--ink-70)" }}>· {profile.location.toUpperCase()} ·</span>}
-          {profile.swarmRef && <SwarmBadge swarmRef={profile.swarmRef} />}
+          {profile.ipfsCid && <IpfsBadge cid={profile.ipfsCid} />}
           {profile.rotateAddr && <RotatingBadge />}
         </div>
         {profile.sealedBy && (
@@ -531,9 +522,9 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
                 </Link>
               </div>
             )}
-            {profile.swarmRef && (
+            {profile.ipfsCid && (
               <div className="t-italic" style={{ fontSize: 13, color: "var(--ink-50)", marginTop: 8 }}>
-                served from <SwarmBadge swarmRef={profile.swarmRef} inline />
+                served from <IpfsBadge cid={profile.ipfsCid} inline />
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 16 }}>

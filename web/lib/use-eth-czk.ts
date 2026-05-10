@@ -78,6 +78,11 @@ export interface FiatHelpers {
   ratePerEth: number;
   kcPerEth: number;
   usdPerEth: number;
+  /** Take any free-text price the user typed ("od 200 Kč / hod", "from $20 / hr",
+   *  "200" with no unit) and return a locale-aware display that always pairs
+   *  the local-currency figure with its ETH equivalent. Used by skill rows and
+   *  feed offers where prices are stored as plain strings. */
+  formatFreeTextPrice: (raw: string) => string;
 }
 
 /** Language-aware fiat formatting helpers. Use this instead of useEthCzkRate
@@ -129,6 +134,52 @@ export function useFx(): FiatHelpers {
         isEn
           ? `1 ETH ≈ $${numFmt.format(Math.round(usdPerEth))} (live · CoinGecko)`
           : `1 ETH ≈ ${numFmt.format(Math.round(kcPerEth))} Kč (live · CoinGecko)`,
+      formatFreeTextPrice: (raw: string) => {
+        const trimmed = (raw ?? "").trim();
+        if (!trimmed) return "—";
+        // If the seller typed a USD amount, convert to Kč for cs locale; flip
+        // for en. Patterns we recognise: "$20", "20 USD", "200 Kč", "200 Kc",
+        // "200 CZK". Anything we can't parse passes through verbatim with an
+        // ETH suffix appended only when a leading number is present.
+        const usdMatch = trimmed.match(/^(?:\$|usd\s*)?\s*(\d[\d\s.,]*)\s*(?:usd|\$)?(?:\s*\/\s*(.+))?$/i);
+        const kcMatch = trimmed.match(/^(?:od|from)?\s*(\d[\d\s.,]*)\s*(?:kč|kc|czk)\s*(?:\/\s*(.+))?/i);
+
+        let kcValue: number | null = null;
+        let suffix = "";
+        if (kcMatch) {
+          kcValue = parseInt(kcMatch[1].replace(/[\s.,]/g, ""), 10);
+          suffix = kcMatch[2] ? ` / ${kcMatch[2]}` : "";
+        } else if (usdMatch && /(usd|\$)/i.test(trimmed)) {
+          const usdValue = parseInt(usdMatch[1].replace(/[\s.,]/g, ""), 10);
+          if (Number.isFinite(usdValue) && usdPerEth > 0 && kcPerEth > 0) {
+            // Convert via fx: USD → ETH → Kč
+            kcValue = Math.round((usdValue / usdPerEth) * kcPerEth);
+            suffix = usdMatch[2] ? ` / ${usdMatch[2]}` : "";
+          }
+        }
+
+        if (kcValue !== null && Number.isFinite(kcValue) && kcValue > 0) {
+          const fiat = fmt(fromKc(kcValue));
+          const eth = ethStr(kcValue / kcPerEth, 4);
+          return `${fiat}${suffix} · ${eth}`;
+        }
+        // Verbatim fallback: pass through the user's text. If a leading number
+        // exists with no recognised currency, append the ETH-equivalent.
+        const numMatch = trimmed.match(/^(\d[\d\s.,]*)/);
+        if (numMatch) {
+          const n = parseInt(numMatch[1].replace(/[\s.,]/g, ""), 10);
+          if (Number.isFinite(n) && n > 0) {
+            // Treat as Kč by convention (legacy storage); render with locale
+            // currency and ETH alongside.
+            const fiat = fmt(fromKc(n));
+            const eth = ethStr(n / kcPerEth, 4);
+            const after = trimmed.slice(numMatch[0].length).trim();
+            const tail = after ? ` ${after}` : "";
+            return `${fiat}${tail} · ${eth}`;
+          }
+        }
+        return trimmed;
+      },
     };
   }, [lang, kcPerEth, usdPerEth]);
 }

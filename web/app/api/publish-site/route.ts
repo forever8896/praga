@@ -1,18 +1,25 @@
-// POST /api/publish-site — render the caller's profile to HTML, upload to
-// Swarm via Bee, write the bzz reference back as the subname's contenthash.
-// After this, `<name>.pragueconnect.eth.limo` resolves to the Swarm-hosted page.
+// POST /api/publish-site — render the caller's profile to HTML, pin it, and
+// write the resulting contenthash back to the subname.
+//
+// Storage policy: Swarm is the canonical layer. We try uploading to a Bee
+// node first (via SWARM_BEE_URL + SWARM_POSTAGE_BATCH_ID) and only fall
+// back to IPFS via Pinata if Swarm is unconfigured or the upload fails.
+// After this, `<name>.pragueconnect.eth.limo` resolves to the pinned page.
 import { NextResponse } from "next/server";
 import { getSubname, setSubname, type NameStoneRecord } from "@/lib/resolver";
 import { verifySession } from "@/lib/privy-server";
 import { env } from "@/lib/env";
-import { isSwarmConfigured, renderProfileHtml, uploadHtmlToSwarm } from "@/lib/swarm";
+import { renderProfileHtml } from "@/lib/site-html";
+import { isSwarmConfigured, uploadHtmlToSwarm } from "@/lib/swarm";
+import { isIpfsConfigured, uploadHtmlToIpfs } from "@/lib/ipfs";
+import { getEthFxRates } from "@/lib/eth-czk";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  if (!isSwarmConfigured()) {
-    return NextResponse.json({ error: "swarm-not-configured" }, { status: 503 });
+  if (!isSwarmConfigured() && !isIpfsConfigured()) {
+    return NextResponse.json({ error: "no-storage-configured" }, { status: 503 });
   }
 
   const session = await verifySession(req);
@@ -38,28 +45,73 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  try {
-    const html = renderProfileHtml(record as NameStoneRecord);
-    const { reference, contenthash } = await uploadHtmlToSwarm(html);
-    await setSubname({
-      domain: env.namestoneDomain,
-      name: label,
-      address: record.address,
-      text_records: record.text_records,
-      contenthash,
-    });
-    return NextResponse.json({
-      ok: true,
-      reference,
-      contenthash,
-      ens: `${label}.pragueconnect.eth`,
-      limo: `https://${label}.pragueconnect.eth.limo`,
-      bzz: `https://api.gateway.ethswarm.org/bzz/${reference}`,
-    });
-  } catch (e) {
+  let storage: "swarm" | "ipfs" | null = null;
+  let contenthash: `0x${string}` | null = null;
+  let reference: string | null = null;
+  let swarmError: string | null = null;
+
+  // Snapshot live fx rates so the static HTML can render an ETH equivalent
+  // alongside Kč prices. Profile is canonically Prague (Kč as the stored
+  // currency); pairing with ETH makes it readable to anyone, anywhere.
+  const fxRates = await getEthFxRates();
+
+  if (isSwarmConfigured()) {
+    try {
+      const html = renderProfileHtml(record as NameStoneRecord, "Swarm", fxRates);
+      const r = await uploadHtmlToSwarm(html);
+      storage = "swarm";
+      contenthash = r.contenthash;
+      reference = r.reference;
+    } catch (e) {
+      // Swarm fails when the Bee node is unreachable (tunnel down) or the
+      // postage batch is exhausted. Record the reason and try IPFS.
+      swarmError = e instanceof Error ? e.message : String(e);
+      console.warn("[publish-site] Swarm upload failed, will try IPFS:", swarmError);
+    }
+  }
+
+  if (!contenthash && isIpfsConfigured()) {
+    try {
+      const html = renderProfileHtml(record as NameStoneRecord, "IPFS", fxRates);
+      const r = await uploadHtmlToIpfs(html);
+      storage = "ipfs";
+      contenthash = r.contenthash;
+      reference = r.cid;
+    } catch (e) {
+      const ipfsError = e instanceof Error ? e.message : String(e);
+      return NextResponse.json(
+        { error: "publish-failed", swarm: swarmError, ipfs: ipfsError },
+        { status: 502 },
+      );
+    }
+  }
+
+  if (!contenthash || !storage) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "publish-failed" },
+      { error: "publish-failed", swarm: swarmError ?? "swarm-not-configured", ipfs: "ipfs-not-configured" },
       { status: 502 },
     );
   }
+
+  await setSubname({
+    domain: env.namestoneDomain,
+    name: label,
+    address: record.address,
+    text_records: record.text_records,
+    contenthash,
+  });
+
+  const ens = `${label}.pragueconnect.eth`;
+  return NextResponse.json({
+    ok: true,
+    storage,
+    contenthash,
+    reference,
+    ens,
+    limo: `https://${ens}.limo`,
+    gateway: storage === "swarm"
+      ? `https://api.gateway.ethswarm.org/bzz/${reference}/`
+      : `https://ipfs.io/ipfs/${reference}`,
+    swarmFallbackReason: storage === "ipfs" ? swarmError : undefined,
+  });
 }

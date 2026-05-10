@@ -43,7 +43,10 @@ function timeAgo(unixSec: number): string {
 }
 
 function priceFor(offer: FeedOffer, fx: ReturnType<typeof useFx>): string {
-  if (offer.source === "skill") return normaliseSkillPrice(offer.priceLabel);
+  // Skills are stored with free-text prices (the seller types them); route
+  // through the locale+ETH formatter so Kč gets converted to USD on en and
+  // every row shows an ETH equivalent next to the fiat figure.
+  if (offer.source === "skill") return fx.formatFreeTextPrice(offer.priceLabel ?? "");
   if (offer.type === "GIFT") return "Free";
   return offer.kc > 0 ? fx.pairFromKc(offer.kc) : "—";
 }
