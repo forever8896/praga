@@ -24,7 +24,9 @@ import {
   toHex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { findByNamehash } from "@/lib/resolver-store";
+import { findByNamehash, type SubnameRecord } from "@/lib/resolver-store";
+import { paymentAddress } from "@/lib/stealth";
+import { appendBulletin } from "@/lib/stealth-bulletin";
 
 export const runtime = "nodejs";
 
@@ -37,7 +39,59 @@ const SELECTORS = {
   contenthash: "0xbc1c58d1",
 } as const;
 
-const TTL_SECONDS = 600;
+// Resolution-cache TTL doubles as the rotation cadence: clients re-fetching
+// inside this window get the same signed answer; outside it, the gateway
+// mints a new stealth address. 120s is short enough for a live demo refresh
+// to produce visibly different addresses, long enough that a single send
+// flow's pre-flight checks reuse one stealth address.
+const TTL_SECONDS = 120;
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+
+/** If the record opted in to stealth rotation and has a valid meta-address,
+ *  derive a fresh stealth address and append the ephemeral pubkey to the
+ *  bulletin. Returns the static EOA otherwise so existing users are unaffected. */
+async function resolveAddrForRecord(
+  rec: SubnameRecord | null,
+  coinType: number,
+): Promise<`0x${string}`> {
+  if (!rec) return ZERO_ADDRESS;
+  if (coinType !== 60) {
+    // Multichain coin types just look up the static record. Rotation only
+    // applies to Ethereum addresses for now.
+    const fromMulti = rec.coin_types?.[String(coinType)];
+    if (fromMulti) {
+      return (fromMulti.startsWith("0x") ? fromMulti : `0x${fromMulti}`) as `0x${string}`;
+    }
+    return "0x" as `0x${string}`;
+  }
+
+  const rotate = rec.text_records?.["stealth-rotate-addr"] === "true";
+  const meta = rec.text_records?.["stealth-meta-address"] ?? "";
+  if (!rotate || !meta.startsWith("st:eth:")) {
+    return rec.address;
+  }
+  try {
+    const out = paymentAddress(meta);
+    // Await the bulletin write so we never hand out a stealth address whose
+    // ephemeral key is unrecorded — the recipient must be able to scan and
+    // sweep, otherwise funds land at an unsweepable address.
+    await appendBulletin(rec.domain, rec.name, {
+      stealthAddress: out.stealthAddress,
+      ephemeralPubKey: out.ephemeralPublicKey,
+      viewTag: out.viewTag,
+      ts: Date.now(),
+      coinType: 60,
+    });
+    return out.stealthAddress;
+  } catch (e) {
+    console.warn(
+      `[ccip] stealth rotation failed for ${rec.name}.${rec.domain}; falling back to static addr:`,
+      e instanceof Error ? e.message : e,
+    );
+    return rec.address;
+  }
+}
 
 interface CCIPRequest {
   sender: `0x${string}`;
@@ -89,7 +143,7 @@ async function handle({ sender, data }: CCIPRequest): Promise<Response> {
     if (innerSelector === SELECTORS.addr) {
       const [node] = decodeAbiParameters([{ name: "node", type: "bytes32" }], `0x${inner.slice(10)}`);
       const rec = await findByNamehash(node as `0x${string}`);
-      const addr = (rec?.address ?? "0x0000000000000000000000000000000000000000") as `0x${string}`;
+      const addr = await resolveAddrForRecord(rec, 60);
       result = encodeAbiParameters([{ type: "address" }], [addr]);
     } else if (innerSelector === SELECTORS.addrMulticoin) {
       const [node, coinType] = decodeAbiParameters(
@@ -100,17 +154,13 @@ async function handle({ sender, data }: CCIPRequest): Promise<Response> {
         `0x${inner.slice(10)}`,
       );
       const rec = await findByNamehash(node as `0x${string}`);
-      // Coin type 60 = ETH on mainnet. ENS multichain spec: addr() with cointype=60 must equal addr(node).
-      const ETH_COIN = BigInt(60);
-      let addrBytes: `0x${string}` = "0x";
-      if (rec) {
-        if (BigInt(coinType as bigint) === ETH_COIN) {
-          addrBytes = rec.address;
-        } else {
-          const fromMulti = rec.coin_types?.[String(coinType)];
-          if (fromMulti) addrBytes = (fromMulti.startsWith("0x") ? fromMulti : `0x${fromMulti}`) as `0x${string}`;
-        }
-      }
+      // ENS multichain spec: addr() with cointype=60 must equal addr(node).
+      // Both branches go through resolveAddrForRecord so rotation behaves
+      // identically whether the client asked via the legacy addr() or the
+      // multicoin variant.
+      const ct = Number(coinType as bigint);
+      const addr = await resolveAddrForRecord(rec, ct);
+      const addrBytes = (addr === ZERO_ADDRESS && ct !== 60 ? "0x" : addr) as `0x${string}`;
       result = encodeAbiParameters([{ type: "bytes" }], [addrBytes]);
     } else if (innerSelector === SELECTORS.text) {
       const [node, key] = decodeAbiParameters(
