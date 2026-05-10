@@ -24,6 +24,7 @@ import {
   type OnchainTask,
   type Phase,
   PHASE_LABELS,
+  PHASE_HINTS,
 } from "./escrow";
 import { env } from "./env";
 import {
@@ -199,7 +200,7 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         args: [taskId, workerArg],
       });
       await sendTx(data, value);
-      await onSystemMessage?.(`📜 Funded ${amountEth} ETH for ${peerEns} — Nigredo phase opened.`);
+      await onSystemMessage?.(`Funded ${amountEth} ETH into escrow for ${peerEns}. Funds are locked on-chain until released.`);
       setTimeout(refresh, 2500);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "fund-failed");
@@ -255,7 +256,7 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         });
         await sendTx(data);
       }
-      await onSystemMessage?.(`🌒 Accepted the work — Albedo phase opened. Stealth recipient committed${v2 ? " · sig-relayed" : ""}.`);
+      await onSystemMessage?.(`Accepted the work. A fresh stealth address has been committed as the payout destination${v2 ? "; the worker's main wallet stays unlinked" : ""}.`);
       setTimeout(refresh, 2500);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "accept-failed");
@@ -289,7 +290,7 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         const data = encodeFunctionData({ abi: ESCROW_ABI, functionName: "deliver", args: [taskId] });
         await sendTx(data);
       }
-      await onSystemMessage?.(`☀️ Delivered. Awaiting release — Citrinitas phase opened.`);
+      await onSystemMessage?.(`Marked delivered. Buyer can release the funds now, or the worker can self-release after 24 hours.`);
       setTimeout(refresh, 2500);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "deliver-failed");
@@ -309,7 +310,7 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         args: [taskId, 5],
       });
       await sendTx(data);
-      await onSystemMessage?.(`⚜️ Released with five seals. Rubedo phase reached — funds at the stealth address.`);
+      await onSystemMessage?.(`Released with a 5-star rating. Funds delivered to the worker's stealth address; receipt sealed.`);
       setTimeout(refresh, 2500);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "release-failed");
@@ -332,7 +333,7 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         args: [taskId],
       });
       await sendTx(data);
-      await onSystemMessage?.(`📜 Funder cancelled — funds returned. The seal was broken without delivery.`);
+      await onSystemMessage?.(`Buyer cancelled — the worker did not deliver in time. Funds returned to the buyer.`);
       setTimeout(refresh, 2500);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "cancel-failed");
@@ -404,16 +405,20 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <WaxSeal size={32} state={phase === 4 ? "rubedo" : phase === 3 ? "citrinitas" : phase >= 1 ? "albedo" : "nigredo"} rotate={-7} emboss={PHASE_EMBOSS[phase]} />
           <div>
-            <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)" }}>{t("opus.kicker")}</div>
+            <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)" }}>{t("opus.kicker")} · {phase === 0 ? "READY" : `STEP ${phase} OF 4`}</div>
             <div className="t-display" style={{ fontSize: 16, letterSpacing: "0.04em" }}>{PHASE_LABELS[phase] ?? "—"}</div>
           </div>
         </div>
         <FleurDeLis size={20} />
       </div>
 
+      <p className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)", lineHeight: 1.5, margin: "0 0 10px" }}>
+        {PHASE_HINTS[phase]}
+      </p>
+
       {task && task.amount > BigInt(0) && (
         <div className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)", marginBottom: 8 }}>
-          {(Number(task.amount) / 1e18).toFixed(5)} ETH · {isFunder ? t("opus.youFunded") : isWorker ? t("opus.youAreWorker") : t("opus.between")}
+          {(Number(task.amount) / 1e18).toFixed(5)} ETH locked in escrow · {isFunder ? t("opus.youFunded") : isWorker ? t("opus.youAreWorker") : t("opus.between")}
         </div>
       )}
 

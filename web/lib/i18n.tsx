@@ -129,7 +129,7 @@ const DICT: Dict = {
   "thread.backToSquare": { en: "BACK TO THE SQUARE", cs: "ZPĚT NA NÁMĚSTÍ" },
 
   // Magnum Opus / escrow
-  "opus.kicker": { en: "THE MAGNUM OPUS", cs: "MAGNUM OPUS" },
+  "opus.kicker": { en: "ESCROW ON BASE", cs: "ESCROW NA BASE" },
   "opus.fund": { en: "FUND THE WORK", cs: "ZAPLATIT PRÁCI" },
   "opus.accept": { en: "ACCEPT THE WORK", cs: "PŘIJMOUT PRÁCI" },
   "opus.deliver": { en: "MARK DELIVERED", cs: "OZNAČIT JAKO HOTOVÉ" },

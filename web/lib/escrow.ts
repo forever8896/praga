@@ -94,13 +94,28 @@ export function escrowV2Domain(chainId: number, verifyingContract: `0x${string}`
 }
 
 export type Phase = 0 | 1 | 2 | 3 | 4 | 5;
+/** Phase labels for the escrow widget. The plain-language headline comes
+ *  first; the alchemical name is preserved as a stylistic suffix only.
+ *  See PHASE_HINTS below for the one-line "what's happening right now"
+ *  copy that we render under each headline. */
 export const PHASE_LABELS: Record<Phase, string> = {
-  0: "None",
-  1: "Nigredo · Funded",
-  2: "Albedo · In progress",
-  3: "Citrinitas · Delivered",
-  4: "Rubedo · Released",
-  5: "Refunded",
+  0: "Not funded yet",
+  1: "Funds locked · awaiting acceptance",
+  2: "Work in progress",
+  3: "Delivered · awaiting release",
+  4: "Released · paid",
+  5: "Cancelled · refunded",
+};
+
+/** Short "what is the escrow doing right now" line, shown under the
+ *  headline phase label. Copy is plain English; no alchemy. */
+export const PHASE_HINTS: Record<Phase, string> = {
+  0: "Buyer locks funds in the escrow contract on Base. The worker can then accept and start.",
+  1: "Buyer's ETH is held by the contract. The worker accepts to start the work — they sign with their stealth key, no main wallet on chain.",
+  2: "Funds remain locked. When the worker is done, they mark Delivered to start the buyer's review window.",
+  3: "Worker has marked the task delivered. Buyer reviews and releases. Worker can self-release after 24 hours if buyer is silent.",
+  4: "Buyer signed off. Funds were paid out to the worker's stealth address; their main wallet stays unlinked.",
+  5: "Funds returned to the buyer. The task is closed.",
 };
 
 export interface OnchainTask {

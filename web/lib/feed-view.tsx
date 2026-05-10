@@ -15,7 +15,6 @@ import {
   Cartouche,
   FilterChip,
   FleurDeLis,
-  Marginalia,
 } from "./ornaments";
 import type { FeedOffer, FeedPerson } from "./offers";
 import { normaliseSkillPrice } from "./offers";
@@ -651,8 +650,6 @@ function DesktopFeed({ offers, all, offerings, asks, people, filter, setFilter, 
 
       <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 220px", gap: 32, padding: "32px 56px 64px" }}>
         <aside>
-          <Marginalia kind="constellation" size={170} />
-          <div className="hr-gilded" style={{ margin: "24px 0" }} />
           <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.25em", color: "var(--ink-70)", marginBottom: 12 }}>{t("feed.neighbourhood")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {neighbourhoods.length === 0 ? (
@@ -749,9 +746,6 @@ function DesktopFeed({ offers, all, offerings, asks, people, filter, setFilter, 
               + COMPOSE
             </Link>
           </Cartouche>
-          <div style={{ marginTop: 24 }}>
-            <Marginalia kind="pragueMap" size={170} />
-          </div>
         </aside>
       </div>
     </div>
