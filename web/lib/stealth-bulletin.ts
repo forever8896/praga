@@ -21,6 +21,10 @@ export interface BulletinEntry {
   ts: number;        // unix ms
   coinType?: number; // 60 = ETH (default). Future: other ENSIP-9 chains.
   swept?: boolean;   // set true once the wallet view confirms a sweep tx.
+  anchored?: boolean; // set true once Phase-4 has pushed this entry to the
+                      // on-chain ERC-5564 announcer. After anchoring, the
+                      // user can sweep without trusting our bulletin storage.
+  anchorTxHash?: `0x${string}`;
 }
 
 const KV_AVAILABLE = Boolean(
@@ -103,6 +107,43 @@ export async function markSwept(
   const list = memBulletins.get(k) ?? [];
   for (const e of list) {
     if (e.stealthAddress.toLowerCase() === target) e.swept = true;
+  }
+}
+
+/** Mark a bulletin entry as anchored on the ERC-5564 announcer. Stores the
+ *  anchor tx hash so the wallet view can link out to a block explorer. */
+export async function markAnchored(
+  domain: string,
+  name: string,
+  stealthAddress: `0x${string}`,
+  txHash: `0x${string}`,
+): Promise<void> {
+  const k = bulletinKey(domain, name);
+  const target = stealthAddress.toLowerCase();
+  if (KV_AVAILABLE) {
+    try {
+      const all = await kv.lrange(k, 0, BULLETIN_CAP - 1);
+      const updated = all.map((r) => {
+        const e = typeof r === "string" ? (JSON.parse(r) as BulletinEntry) : (r as BulletinEntry);
+        if (e.stealthAddress.toLowerCase() === target) {
+          e.anchored = true;
+          e.anchorTxHash = txHash;
+        }
+        return e;
+      });
+      await kv.del(k);
+      if (updated.length) await kv.lpush(k, ...[...updated].reverse());
+      return;
+    } catch (e) {
+      console.warn("[bulletin] KV markAnchored failed:", e instanceof Error ? e.message : e);
+    }
+  }
+  const list = memBulletins.get(k) ?? [];
+  for (const e of list) {
+    if (e.stealthAddress.toLowerCase() === target) {
+      e.anchored = true;
+      e.anchorTxHash = txHash;
+    }
   }
 }
 

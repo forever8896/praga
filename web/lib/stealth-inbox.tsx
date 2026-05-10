@@ -43,6 +43,8 @@ interface BulletinEntry {
   viewTag: `0x${string}`;
   ts: number;
   swept?: boolean;
+  anchored?: boolean;
+  anchorTxHash?: `0x${string}`;
 }
 
 interface BulletinResponse {
@@ -76,6 +78,9 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
   const [vaultBalance, setVaultBalance] = useState<bigint | null>(null);
   const [vaultLoading, setVaultLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [anchoring, setAnchoring] = useState(false);
+  const [anchorErr, setAnchorErr] = useState<string | null>(null);
+  const [anchorResults, setAnchorResults] = useState<{ stealthAddress: string; txHash: string }[]>([]);
 
   const onMainnet = env.defaultChainId === base.id;
   const chain = onMainnet ? base : baseSepolia;
@@ -219,6 +224,37 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
     }
   };
 
+  // --- anchor on-chain ----------------------------------------------------
+  const onAnchor = async () => {
+    if (!ensLabel || !accessToken) return;
+    setAnchoring(true);
+    setAnchorErr(null);
+    setAnchorResults([]);
+    try {
+      const res = await fetch(`/api/stealth/anchor?label=${encodeURIComponent(ensLabel)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAnchorErr(data.error ?? "anchor-failed");
+        return;
+      }
+      setAnchorResults(data.anchored ?? []);
+      // Refresh the bulletin so the panel reflects new `anchored` flags.
+      const re = await fetch(`/api/stealth/bulletin?label=${encodeURIComponent(ensLabel)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const reData = (await re.json()) as BulletinResponse;
+      if (re.ok && reData.entries) setEntries(reData.entries);
+    } catch (e) {
+      setAnchorErr(e instanceof Error ? e.message : "anchor-failed");
+    } finally {
+      setAnchoring(false);
+    }
+  };
+
   // --- key custody --------------------------------------------------------
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
   const isEmbedded = !!embeddedWallet;
@@ -260,6 +296,8 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
 
   const numEntries = entries?.length ?? null;
   const hasNonEmpty = (scanned ?? []).some((e) => !e.swept && e.balanceWei > SWEEP_GAS_BUFFER_WEI);
+  const anchoredCount = entries?.filter((e) => e.anchored).length ?? 0;
+  const unanchoredCount = entries?.filter((e) => !e.anchored).length ?? 0;
 
   return (
     <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 18 }}>
@@ -343,6 +381,53 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
             )}
           </>
         )}
+      </Cartouche>
+
+      <Cartouche padding={24}>
+        <Kicker>ANCHOR ON-CHAIN</Kicker>
+        <Title>Survive the gateway</Title>
+        <p className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", lineHeight: 1.55, margin: "4px 0 14px" }}>
+          Push your bulletin entries to the canonical ERC-5564 announcer on Base. Once anchored, any standard stealth scanner — FluidKey, ScopeLift, anyone — can rebuild your sweep list from on-chain logs. Your privacy stops depending on us being here.
+        </p>
+        <div className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)", marginBottom: 10 }}>
+          {entries === null
+            ? "loading bulletin…"
+            : `${anchoredCount} anchored · ${unanchoredCount} pending`}
+        </div>
+        <button
+          onClick={onAnchor}
+          disabled={anchoring || unanchoredCount === 0}
+          style={btn(unanchoredCount === 0 ? "var(--ink-50)" : "var(--ink)")}
+        >
+          {anchoring
+            ? "anchoring…"
+            : unanchoredCount === 0
+            ? "ALL ANCHORED"
+            : `ANCHOR ${unanchoredCount} ENTR${unanchoredCount === 1 ? "Y" : "IES"}`}
+        </button>
+        {anchorErr && (
+          <div className="t-italic" style={{ fontSize: 12, color: "var(--vermilion)", marginTop: 8 }}>{anchorErr}</div>
+        )}
+        {anchorResults.length > 0 && (
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--verdigris)" }}>ANCHORED</div>
+            {anchorResults.map((r) => (
+              <a
+                key={r.txHash}
+                href={`${onMainnet ? "https://basescan.org" : "https://sepolia.basescan.org"}/tx/${r.txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="t-mono"
+                style={{ fontSize: 11, color: "var(--ink-70)", textDecoration: "none" }}
+              >
+                {r.stealthAddress.slice(0, 10)}… → ERC-5564 · {r.txHash.slice(0, 10)}↗
+              </a>
+            ))}
+          </div>
+        )}
+        <p className="t-mono" style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--ink-50)", marginTop: 12 }}>
+          announcer · {env.erc5564Announcer.slice(0, 6)}…{env.erc5564Announcer.slice(-4)} · gas paid by relayer
+        </p>
       </Cartouche>
 
       <Cartouche padding={24}>
