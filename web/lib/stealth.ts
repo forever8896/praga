@@ -89,11 +89,52 @@ export function paymentAddress(metaAddress: string): {
 
 // @noble/curves is a transitive dep of viem, so this resolves with no extra install.
 import { secp256k1 } from "@noble/curves/secp256k1";
+import { keccak256 } from "viem";
 
 function privateKeyToCompressedPublic(priv: `0x${string}`): `0x${string}` {
   const bytes = secp256k1.getPublicKey(priv.slice(2), true);
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
   return `0x${hex}`;
+}
+
+/** Convert a secp256k1 public key (compressed or uncompressed hex) to its
+ *  Ethereum address. Used by the v2 escrow flow to derive `workerKey` —
+ *  the address that ecrecover gives back when the worker signs intents
+ *  with their stealth spending privkey. */
+export function publicKeyToEthAddress(pubKeyHex: string): `0x${string}` {
+  const clean = (pubKeyHex.startsWith("0x") ? pubKeyHex.slice(2) : pubKeyHex).toLowerCase();
+  let xy: Uint8Array;
+  if (clean.length === 66) {
+    const point = secp256k1.ProjectivePoint.fromHex(clean);
+    xy = point.toRawBytes(false).slice(1); // drop 0x04 prefix
+  } else if (clean.length === 130 && clean.startsWith("04")) {
+    xy = hexToBytes(clean.slice(2));
+  } else if (clean.length === 128) {
+    xy = hexToBytes(clean);
+  } else {
+    throw new Error(`invalid public key length: ${clean.length}`);
+  }
+  const hash = keccak256(`0x${bytesToHex(xy)}` as `0x${string}`);
+  return `0x${hash.slice(-40)}` as `0x${string}`;
+}
+
+/** Extract the spending-key-derived address from an ERC-6538 meta-address.
+ *  Format: st:eth:0x<spendingPubKey-66><viewingPubKey-66>. */
+export function metaAddressToWorkerKey(meta: string): `0x${string}` {
+  if (!meta.startsWith("st:eth:0x")) throw new Error("invalid meta-address");
+  const hex = meta.slice("st:eth:0x".length);
+  if (hex.length !== 132) throw new Error("invalid meta-address payload length");
+  return publicKeyToEthAddress(`0x${hex.slice(0, 66)}`);
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // Re-export for downstream

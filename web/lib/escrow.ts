@@ -1,6 +1,14 @@
 // PragueConnectEscrow client helpers — derive a deterministic taskId from a thread
 // pair, read on-chain task state, and expose an ABI for fund/accept/deliver/
 // release calls.
+//
+// Two contract versions:
+//   v1 (ESCROW_ABI):  msg.sender-based auth on accept/deliver/release.
+//                     Worker's main EOA appears in 3 events per task. Kept
+//                     for back-compat but new flows use v2.
+//   v2 (ESCROW_V2_ABI): EIP-712 sig-based auth. Worker signs intents with
+//                       their stealth spending key; anyone submits the tx.
+//                       Worker's main EOA never appears.
 import { createPublicClient, http, keccak256, encodePacked } from "viem";
 import { base, baseSepolia } from "viem/chains";
 import { env } from "./env";
@@ -28,6 +36,59 @@ export const ESCROW_ABI = [
     ],
   },
 ] as const;
+
+export const ESCROW_V2_ABI = [
+  { type: "function", name: "fund", stateMutability: "payable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "workerKey", type: "address" }], outputs: [] },
+  { type: "function", name: "acceptWithSig", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "stealthRecipient", type: "address" }, { name: "ephemeralPubKey", type: "bytes" }, { name: "viewTag", type: "bytes1" }, { name: "workerSig", type: "bytes" }], outputs: [] },
+  { type: "function", name: "deliverWithSig", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "workerSig", type: "bytes" }], outputs: [] },
+  { type: "function", name: "releaseWithSig", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "rating", type: "uint8" }, { name: "sig", type: "bytes" }], outputs: [] },
+  { type: "function", name: "releaseAsFunder", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "rating", type: "uint8" }], outputs: [] },
+  { type: "function", name: "refund", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }], outputs: [] },
+  {
+    type: "function",
+    name: "tasks",
+    stateMutability: "view",
+    inputs: [{ name: "taskId", type: "bytes32" }],
+    outputs: [
+      { name: "funder", type: "address" },
+      { name: "workerKey", type: "address" },
+      { name: "amount", type: "uint96" },
+      { name: "deliveredAt", type: "uint40" },
+      { name: "phase", type: "uint8" },
+      { name: "stealthRecipient", type: "address" },
+      { name: "ephemeralPubKey", type: "bytes" },
+      { name: "viewTag", type: "bytes1" },
+    ],
+  },
+] as const;
+
+/** EIP-712 typed-data envelope for v2 escrow signatures. The worker (or
+ *  funder, on release) signs one of these with their spending privkey;
+ *  anyone submits the resulting tx. */
+export const ESCROW_V2_TYPES = {
+  Accept: [
+    { name: "taskId", type: "bytes32" },
+    { name: "stealthRecipient", type: "address" },
+    { name: "ephemeralPubKey", type: "bytes" },
+    { name: "viewTag", type: "bytes1" },
+  ],
+  Deliver: [
+    { name: "taskId", type: "bytes32" },
+  ],
+  Release: [
+    { name: "taskId", type: "bytes32" },
+    { name: "rating", type: "uint8" },
+  ],
+} as const;
+
+export function escrowV2Domain(chainId: number, verifyingContract: `0x${string}`) {
+  return {
+    name: "PragueConnectEscrowV2",
+    version: "1",
+    chainId,
+    verifyingContract,
+  } as const;
+}
 
 export type Phase = 0 | 1 | 2 | 3 | 4 | 5;
 export const PHASE_LABELS: Record<Phase, string> = {
@@ -66,12 +127,16 @@ const escrowClient = () => {
 };
 
 export async function loadTask(taskId: `0x${string}`): Promise<OnchainTask | null> {
-  const escrow = env.escrowAddress;
-  if (!escrow) return null;
+  // Prefer v2 if deployed; v1 read kept for tasks created on the older contract.
+  const v2 = env.escrowV2Address;
+  const v1 = env.escrowAddress;
+  const target = v2 || v1;
+  const abi = v2 ? ESCROW_V2_ABI : ESCROW_ABI;
+  if (!target) return null;
   try {
     const result = await escrowClient().readContract({
-      address: escrow as `0x${string}`,
-      abi: ESCROW_ABI,
+      address: target as `0x${string}`,
+      abi,
       functionName: "tasks",
       args: [taskId],
     });
@@ -84,4 +149,16 @@ export async function loadTask(taskId: `0x${string}`): Promise<OnchainTask | nul
   } catch {
     return null;
   }
+}
+
+/** Returns the active escrow contract address (v2 if available, else v1). */
+export function activeEscrowAddress(): `0x${string}` | null {
+  const v2 = env.escrowV2Address;
+  if (v2) return v2 as `0x${string}`;
+  const v1 = env.escrowAddress;
+  return v1 ? (v1 as `0x${string}`) : null;
+}
+
+export function isV2Active(): boolean {
+  return Boolean(env.escrowV2Address);
 }

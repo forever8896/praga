@@ -11,9 +11,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePrivy, useSendTransaction, useSignMessage } from "@privy-io/react-auth";
 import { encodeFunctionData, parseEther } from "viem";
-import { ESCROW_ABI, deriveTaskId, loadTask, type OnchainTask, type Phase, PHASE_LABELS } from "./escrow";
+import { privateKeyToAccount } from "viem/accounts";
+import {
+  ESCROW_ABI,
+  ESCROW_V2_ABI,
+  ESCROW_V2_TYPES,
+  escrowV2Domain,
+  deriveTaskId,
+  loadTask,
+  activeEscrowAddress,
+  isV2Active,
+  type OnchainTask,
+  type Phase,
+  PHASE_LABELS,
+} from "./escrow";
 import { env } from "./env";
-import { paymentAddress, derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
+import {
+  paymentAddress,
+  derivePragueConnectKeys,
+  metaAddressToWorkerKey,
+  PRAGUECONNECT_STEALTH_MESSAGE,
+} from "./stealth";
 import { WaxSeal, FleurDeLis } from "./ornaments";
 import { useT } from "./i18n";
 
@@ -84,15 +102,23 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
   }, [refresh]);
 
   if (!myAddress || !peerAddress || !taskId) return null;
-  if (!env.escrowAddress) return null;
+  const escrowAddr = activeEscrowAddress();
+  if (!escrowAddr) return null;
+  const v2 = isV2Active();
 
   const phase: Phase = (task?.phase ?? 0) as Phase;
   const isFunder = task && task.funder.toLowerCase() === myAddress.toLowerCase();
-  const isWorker = task && task.worker.toLowerCase() === myAddress.toLowerCase();
+  // In v2 the on-chain `worker` slot stores a key-derived address, NOT the
+  // worker's main wallet — so we identify the worker as "anyone who isn't
+  // the funder, in a thread between these two parties." Same logic works
+  // for v1 because peerAddress always equals task.worker there.
+  const isWorker = task && peerAddress
+    ? task.funder.toLowerCase() === peerAddress.toLowerCase()
+    : false;
 
   const sendTx = async (data: `0x${string}`, value: bigint = BigInt(0)) => {
     return sendTransaction({
-      to: env.escrowAddress as `0x${string}`,
+      to: escrowAddr,
       value,
       data,
       chainId: env.defaultChainId,
@@ -108,10 +134,21 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
         setErr("amount must be > 0");
         return;
       }
+      // v2: workerKey = address derived from peer's stealth spending pubkey
+      // (so the on-chain TaskFunded event commits to a key, not an EOA).
+      // Falls back to peerAddress if peer hasn't published a meta-address.
+      let workerArg: `0x${string}` = peerAddress;
+      if (v2 && peerStealthMeta?.startsWith("st:eth:")) {
+        try {
+          workerArg = metaAddressToWorkerKey(peerStealthMeta);
+        } catch {
+          /* fall back to peerAddress */
+        }
+      }
       const data = encodeFunctionData({
-        abi: ESCROW_ABI,
+        abi: v2 ? ESCROW_V2_ABI : ESCROW_ABI,
         functionName: "fund",
-        args: [taskId, peerAddress],
+        args: [taskId, workerArg],
       });
       await sendTx(data, value);
       await onSystemMessage?.(`📜 Funded ${amountEth} ETH for ${peerEns} — Nigredo phase opened.`);
@@ -123,41 +160,54 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
     }
   };
 
+  /** v2: worker signs Accept off-chain with their spending key, relayer submits.
+   *  v1: worker submits accept directly with msg.sender. */
   const onAccept = async () => {
     setErr(null);
     setActing("accept");
     try {
-      // Worker derives a fresh stealth address from their own meta-address.
-      // For self-signed paths, we re-sign and derive on the spot. This means
-      // the worker's gift-route signature is reused — same as on /me/edit.
-      let stealthAddr: `0x${string}`;
-      let ephemeralPubKey: `0x${string}`;
-      let viewTag: `0x${string}`;
+      // Worker derives keys from a deterministic signature over the stealth
+      // message. Same primitive as /me/edit — produces stealth meta + privkeys
+      // in one round-trip with the wallet.
+      const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
+      const keys = derivePragueConnectKeys(signature as `0x${string}`);
+      const out = paymentAddress(keys.metaAddress);
+      const stealthRecipient = out.stealthAddress;
+      const ephemeralPubKey = out.ephemeralPublicKey;
+      const viewTag = out.viewTag;
 
-      if (peerStealthMeta && peerStealthMeta.startsWith("st:eth:")) {
-        // We're the worker; the recipient (us) is described by *our* meta-address
-        // which, in this thread context, is what the peer has stored about *us* — but
-        // we don't have access to it directly. So we re-derive from a signature.
-        const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
-        const keys = derivePragueConnectKeys(signature as `0x${string}`);
-        const out = paymentAddress(keys.metaAddress);
-        stealthAddr = out.stealthAddress;
-        ephemeralPubKey = out.ephemeralPublicKey;
-        viewTag = out.viewTag;
+      if (v2) {
+        // EIP-712 typed-data sign with the spending privkey. Anyone can submit.
+        const account = privateKeyToAccount(keys.spendingPrivateKey);
+        const sig = await account.signTypedData({
+          domain: escrowV2Domain(env.defaultChainId, escrowAddr),
+          types: ESCROW_V2_TYPES,
+          primaryType: "Accept",
+          message: { taskId, stealthRecipient, ephemeralPubKey, viewTag },
+        });
+        const res = await fetch("/api/escrow-relay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            method: "accept",
+            taskId,
+            stealthRecipient,
+            ephemeralPubKey,
+            viewTag,
+            sig,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "relay-failed");
       } else {
-        // No stealth route — fall back to the worker's known address.
-        stealthAddr = myAddress;
-        ephemeralPubKey = "0x" as `0x${string}`;
-        viewTag = "0x00" as `0x${string}`;
+        const data = encodeFunctionData({
+          abi: ESCROW_ABI,
+          functionName: "accept",
+          args: [taskId, stealthRecipient, ephemeralPubKey, viewTag],
+        });
+        await sendTx(data);
       }
-
-      const data = encodeFunctionData({
-        abi: ESCROW_ABI,
-        functionName: "accept",
-        args: [taskId, stealthAddr, ephemeralPubKey, viewTag],
-      });
-      await sendTx(data);
-      await onSystemMessage?.(`🌒 Accepted the work — Albedo phase opened. Stealth recipient committed.`);
+      await onSystemMessage?.(`🌒 Accepted the work — Albedo phase opened. Stealth recipient committed${v2 ? " · sig-relayed" : ""}.`);
       setTimeout(refresh, 2500);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "accept-failed");
@@ -170,8 +220,27 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
     setErr(null);
     setActing("deliver");
     try {
-      const data = encodeFunctionData({ abi: ESCROW_ABI, functionName: "deliver", args: [taskId] });
-      await sendTx(data);
+      if (v2) {
+        const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
+        const keys = derivePragueConnectKeys(signature as `0x${string}`);
+        const account = privateKeyToAccount(keys.spendingPrivateKey);
+        const sig = await account.signTypedData({
+          domain: escrowV2Domain(env.defaultChainId, escrowAddr),
+          types: ESCROW_V2_TYPES,
+          primaryType: "Deliver",
+          message: { taskId },
+        });
+        const res = await fetch("/api/escrow-relay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ method: "deliver", taskId, sig }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "relay-failed");
+      } else {
+        const data = encodeFunctionData({ abi: ESCROW_ABI, functionName: "deliver", args: [taskId] });
+        await sendTx(data);
+      }
       await onSystemMessage?.(`☀️ Delivered. Awaiting release — Citrinitas phase opened.`);
       setTimeout(refresh, 2500);
     } catch (e) {
@@ -185,7 +254,12 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
     setErr(null);
     setActing("release");
     try {
-      const data = encodeFunctionData({ abi: ESCROW_ABI, functionName: "release", args: [taskId, 5] });
+      // v2 funder uses the gas-cheap msg.sender path — they're online anyway.
+      const data = encodeFunctionData({
+        abi: v2 ? ESCROW_V2_ABI : ESCROW_ABI,
+        functionName: v2 ? "releaseAsFunder" : "release",
+        args: [taskId, 5],
+      });
       await sendTx(data);
       await onSystemMessage?.(`⚜️ Released with five seals. Rubedo phase reached — funds at the stealth address.`);
       setTimeout(refresh, 2500);
@@ -272,7 +346,7 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
       )}
 
       <div className="t-mono" style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--ink-50)", marginTop: 8 }}>
-        ESCROW · {env.escrowAddress?.slice(0, 6)}…{env.escrowAddress?.slice(-4)} · {env.defaultChainId === 8453 ? "BASE" : "BASE SEPOLIA"}
+        ESCROW {v2 ? "V2" : ""} · {escrowAddr.slice(0, 6)}…{escrowAddr.slice(-4)} · {env.defaultChainId === 8453 ? "BASE" : "BASE SEPOLIA"}{v2 ? " · sig-auth" : ""}
       </div>
     </div>
   );
