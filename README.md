@@ -1,10 +1,12 @@
 # PragueConnect
 
-**A peer-to-peer marketplace for human favors. Reputation belongs to the human, not the platform.**
+**A peer-to-peer marketplace for human favors, where the receipts belong to the person who earned them.**
 
-Live at **[pragueconnect.xyz](https://www.pragueconnect.xyz/)** · ENS-native at `<name>.pragueconnect.eth` · Payment rails on Base mainnet.
+Live at **[pragueconnect.xyz](https://www.pragueconnect.xyz/)** · ENS-native at `<name>.pragueconnect.eth` · Payment rails on Base · Profiles served from decentralized storage (Swarm primary, IPFS fallback).
 
 > *"Like Craigslist, if Craigslist were a guild ledger from Rudolfine Prague — every name a sealed inscription, every gift a wax stamp, every receipt a chiseled patent."*
+
+![PragueConnect landing — claim your name in Prague](./docs/screenshots/landing-desktop.png)
 
 ---
 
@@ -13,12 +15,12 @@ Live at **[pragueconnect.xyz](https://www.pragueconnect.xyz/)** · ENS-native at
 Each user claims a single ENS subname — `<name>.pragueconnect.eth` — and that one inscription is:
 
 - their **account** (sign-in, identity, the only username that matters),
-- their **public personal site** at `<name>.pragueconnect.eth.limo`,
+- their **public personal site** (rendered HTML pinned to decentralized storage; the CID lives in the subname's `contenthash`),
 - their **sealed letterbox** (XMTP V3 / MLS — end-to-end encrypted DMs),
-- their **portable reputation** (travels with the name; survives the platform),
-- their **stealth gift route** (auto-rotating ERC-5564 addresses — every payment lands at a fresh, unlinkable address).
+- their **on-chain receipt trail** (every tip received, every escrow released, attested to a key they control),
+- their **stealth gift route** (ERC-5564 meta-address — payments derive a fresh, unlinkable address each time).
 
-Everything that's a "platform feature" elsewhere is an **ENS text record** here. There is no platform database. The marketplace data (offers, bios, skills, locations) lives as text records on each user's subname; the payment rails (tips, four-phase escrow) live on Base; messaging is XMTP. PragueConnect is the orchestrator — but if PragueConnect goes away tomorrow, every user keeps their name, their reputation, their inbox, and their funds.
+Everything that's a "platform feature" elsewhere is an **ENS text record** here. There is no platform database. The marketplace data (offers, bios, skills, locations) lives as text records on each user's subname; the payment rails (tips, four-phase escrow) live on Base; messaging is XMTP. PragueConnect is the orchestrator — and the parts that are most portable away from us (XMTP inbox, ENS subname records, on-chain receipts) work even if we vanish. The parts that depend on our gateway today (stealth-address bulletin, KV-stored text records before they're pinned to storage) have explicit "anchor on-chain" / "publish to storage" exits — see *Privacy posture* below for the honest picture of what's portable when.
 
 ---
 
@@ -29,6 +31,8 @@ Everything that's a "platform feature" elsewhere is an **ENS text record** here.
 **Discovery.** `/feed` lists every subname, flattens each user's `offers` text record, and ranks by recency. Filters are sigil chips (handyman / language exchange / errand / ride / gift). No algorithm in the middle.
 
 **Tipping.** `/tip/<ens>` reads the recipient's `stealth-meta-address`, derives a fresh stealth address client-side, calls `PragueConnectTip.tip(...)` on Base. The contract atomically transfers ETH and announces via the canonical ScopeLift ERC-5564 announcer. **Block-explorer view ≠ profile view; the link is broken at the speed of one transaction.**
+
+![Send a sealed gift — the privacy story shown to the sender](./docs/screenshots/tip-desktop.png)
 
 **Referrals.** A user invited by another carries a `sealed-by` text record. When they tip a third party, the contract atomically routes 95% to the recipient's stealth address and 5% to the inviter's stealth address — two announces, one transaction, no dust. `tipWithReferral` makes finder's-marks programmable.
 
@@ -42,18 +46,31 @@ Everything that's a "platform feature" elsewhere is an **ENS text record** here.
 
 PragueConnect ships **per-payment unlinkability** out of the box:
 
-- ERC-5564 stealth addresses, end-to-end. Senders derive a one-time address per gift; the recipient's published address never receives funds directly.
-- **Auto-rotating `addr()` resolution** — each ENS lookup mints a fresh stealth address from the recipient's meta, recorded in a private bulletin only the recipient can read.
-- **EIP-712 sig-auth escrow** — the worker's main EOA never shows up as `msg.sender` of any escrow tx.
-- **Tipped events use canonical ERC-5564 metadata layout** (`viewTag || 0xeeeeeeee || amount`), so any standard scanner (FluidKey, ScopeLift) can rebuild a recipient's history without trusting our gateway.
-- **Memos are hash-committed**, not plaintext on-chain. Senders can attach descriptions for the recipient to see; an analyst pairing your EOA with `"for the cookies, alice"` won't.
-- **Optional bulletin anchoring** — push your stealth-address mints to the canonical ERC-5564 announcer on-chain. Once anchored, your sweep history survives our gateway disappearing.
+- **ERC-5564 stealth addresses, end-to-end.** Senders derive a one-time address per gift; the recipient's published address never receives funds directly. This always happens — there's no toggle.
+- **Auto-rotating `addr()` resolution** *(opt-in via `/me/edit`; default-on for new claims).* When enabled, each ENS lookup of a user's subname mints a fresh stealth address from their meta, recorded in a per-user bulletin only the owner can read. Anyone resolving the name through any wallet/dApp gets a different stealth address than the previous resolver — no static address ever sits at the front door. Older claims that pre-date this default flip can switch it on in their settings.
+- **EIP-712 sig-auth escrow.** The worker's main EOA never shows up as `msg.sender` of any escrow tx — they sign typed-data intents off-chain with their stealth spending key, and any address (relayer, funder, themselves from a fresh wallet) can submit. The on-chain `taskId` commits to the worker's spending-key-derived address, not their main EOA, so an analyst can't confirm a guessed pair by re-hashing.
+- **Canonical ERC-5564 metadata layout** (`viewTag || 0xeeeeeeee || amount`), so any standard scanner (FluidKey, ScopeLift) can rebuild a recipient's history without trusting our gateway.
+- **Memos are hash-committed, not plaintext on-chain.** The Tipped event emits `bytes32 memoHash`; an analyst pairing your EOA with `"for the cookies, alice"` won't. *Caveat:* the plaintext is sender-only today — there's no off-chain channel that delivers it to the recipient yet. Senders type memos, they get keccak'd and forgotten. We'll wire memos through XMTP next; until then, treat the memo field as personal note-taking, not a message to the recipient.
+- **Optional bulletin anchoring.** Push your stealth-address mints to the canonical ERC-5564 announcer on-chain (one click in `/wallet`). Once anchored, your sweep history survives our gateway disappearing — any standard scanner reconstructs the list from on-chain logs. Today this is opt-in; we want it to be auto-anchor on mint.
 
 What's **not yet shipped** is **anonymous aggregation** of those stealth pots into a single spendable balance. The naive sweep is a known weakness — academic work on Umbra ([arXiv 2308.01703](https://arxiv.org/pdf/2308.01703)) shows a Collector heuristic can deanonymize 25–66% of stealth payments at sweep time.
 
 The intended architecture is a **per-recipient aggregator vault** that holds incoming tips at stealth addresses, triggers a `shield()` into a shielded pool only once cumulative balance crosses a credible-anonymity-set threshold, holds for a randomized 48–72h delay, and unshields in rounded denominations. Backend candidates we've evaluated (Railgun, 0xbow Privacy Pools, Cashu-on-EVM, Aztec) — see `AUDIT.md` for the full breakdown.
 
 The honest line: *for sub-$50 tips, a single deposit-and-withdraw on any current shielded pool is fingerprintable. Aggregation requires batching by amount and time. We've designed the vault contract; PRs welcome.*
+
+---
+
+## Screens
+
+A few of the rooms.
+
+| | |
+|---|---|
+| ![Profile — by the hand of Kilian](./docs/screenshots/profile-kilian.png) | ![Mobile landing — claim your name in Prague](./docs/screenshots/landing-mobile.png) |
+| **Public profile.** Bio, skills as alchemical sigils, send-a-private-gift / send-a-sealed-letter CTAs. The hand-drawn portrait roundel and wax seal on the avatar are deterministic per-name. | **Mobile.** The whole flow is mobile-first — claim, browse, tip, message. Czech / English toggle persists. |
+
+The town square (`/feed`) is **invite-gated** — visitors who haven't claimed a name see a "behind the gate" panel asking them to enter with their seal first. Once claimed, the feed shows offers across every subname, ranked by recency, filterable by sigil family.
 
 ---
 
@@ -85,7 +102,7 @@ ENS lookup (any wallet/dApp)
 | Stealth crypto | `@fluidkey/stealth-account-kit` + `@scopelift/stealth-address-sdk` |
 | Stealth rails | Canonical ERC-5564 announcer + ERC-6538 registry |
 | Messaging | XMTP V3 / MLS |
-| Profile hosting | IPFS (via Pinata) — `contenthash` per ENS subname |
+| Profile hosting | Decentralized storage — Swarm (primary, via a Bee node) with IPFS fallback (Pinata). The CID is the `contenthash` of the ENS subname. |
 | Frontend | Next.js 16 App Router (Turbopack), TypeScript, vanilla CSS |
 | Hosting | Vercel (auto-deploy on push to `main`, root `web/`) |
 
@@ -127,6 +144,10 @@ forge test                         # 62/62 passing across 5 contracts
 | `PragueConnectInvites` | [`0x2a06246eeaf9b772cd3e7b8823298c0c8e89df48`](https://basescan.org/address/0x2a06246eeaf9b772cd3e7b8823298c0c8e89df48) |
 | ScopeLift announcer (canonical) | `0x55649E01B5Df198D18D95b5cc5051630cfD45564` |
 | ScopeLift registry (canonical) | `0x6538E6bf4B0eBd30A8Ea093027Ac2422ce5d6538` |
+
+### Base Sepolia (84532) — testnet mirror
+
+The same contracts are deployed on Base Sepolia and the live site at [pragueconnect.xyz](https://www.pragueconnect.xyz/) currently routes payments through the testnet pair so users can experiment without spending real ETH. Flipping production to mainnet is one env-var change (`NEXT_PUBLIC_DEFAULT_CHAIN_ID=8453`) plus updating the i18n strings that reference the chain by name.
 
 ERC-7730 V2 clear-signing descriptors for both PragueConnect contracts in `contracts/erc-7730/`.
 
@@ -201,8 +222,8 @@ PragueConnect is the Prague instance of a city-shaped pattern. The stack is para
 - **The store reads from baseline JSON ∪ Vercel KV ∪ in-memory overlay.** KV is auto-detected via `KV_REST_API_URL` + `KV_REST_API_TOKEN`. One-click provisioning in Vercel dashboard → Storage → Create KV.
 - **Stealth bulletin** is per-user, auth-gated. Only the name's owner can read its mint history; anyone else just sees the latest stealth address (which becomes public the moment funds land at it).
 - **Faucet drip** (`POST /api/faucet-drip`) sends ~0.005 ETH to any Privy-authenticated user whose balance is below 0.001 ETH. Rate-limited to one drip per address per 24h. Requires `PC_FAUCET_KEY` env. Auto-disabled if env is missing.
-- **Profile-to-IPFS pipeline** lives in `web/lib/ipfs.ts` + `web/lib/site-html.ts`. Renders self-contained HTML, pins via Pinata, encodes the CID as ENSIP-7 contenthash, writes it to the subname. Profiles render a "served from IPFS" badge linking to a public gateway so anyone can verify the same content without trusting our app.
-- **About `<name>.pragueconnect.eth.limo`**: eth.limo's wildcard cert only covers `*.eth.limo`, not three-level subdomains. So `<name>.pragueconnect.eth.limo` URLs **don't render in browsers** — that's an eth.limo platform constraint, not something we can fix from the resolver. Mainnet ENS resolution itself works fine; the IPFS gateway URL on each profile is the censorship-resistant view.
+- **Decentralized profile storage.** `web/app/api/publish-site/route.ts` renders a self-contained HTML page (inline CSS, inline SVGs — no external assets) and uploads it to **Swarm** (canonical) via a configured Bee node, falling back to **IPFS via Pinata** if Swarm is unconfigured or unreachable. The returned reference is encoded as an ENSIP-7 `contenthash` and written to the subname, so any wallet/dApp resolving the name discovers the profile without going through our app. Profiles render a "served from Swarm" / "served from IPFS" badge linking to a public gateway so anyone can verify the same content without trusting us.
+- **About `<name>.pragueconnect.eth.limo`**: eth.limo's wildcard cert only covers `*.eth.limo`, not three-level subdomains. So `<name>.pragueconnect.eth.limo` URLs **don't render in browsers** — that's an eth.limo platform constraint, not something we can fix from the resolver. Mainnet ENS resolution itself works fine; the Swarm/IPFS gateway URL on each profile is the censorship-resistant view, and the canonical Vercel-hosted profile at `pragueconnect.xyz/<ens>` is the interactive view.
 
 ---
 

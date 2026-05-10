@@ -107,8 +107,10 @@ NEXT_PUBLIC_PRAGUECONNECT_INVITES_ADDRESS=0x…   # optional — skip if you're 
 # Faucet (optional)
 PC_FAUCET_KEY=0x…                         # funded EOA on the same L2 — see step 7
 
-# IPFS (optional, recommended)
-PINATA_JWT=…                              # for serving profiles from IPFS
+# Decentralized profile storage (optional, recommended)
+SWARM_BEE_URL=https://your-bee-node       # primary: Swarm via your own Bee node
+SWARM_POSTAGE_BATCH_ID=…                  # postage batch (one-time purchase)
+PINATA_JWT=…                              # fallback: IPFS via Pinata
 
 # KV
 KV_REST_API_URL=                          # auto-injected by Vercel KV add-on
@@ -169,16 +171,26 @@ The reference repo deploys one resolver per parent because it's simpler. Multi-p
 
 ---
 
-## Step 10 — Optional: serve profiles from IPFS
+## Step 10 — Optional: serve profiles from decentralized storage
 
-Each `<name>.<city>connect.eth.limo` page can be served from IPFS rather than from Vercel, making the canonical profile site fully decentralized.
+Each `<name>.<city>connect.eth` page can be served from decentralized storage rather than from Vercel, making the canonical profile site fully sovereign. Two backends are supported; the publisher tries Swarm first, falls back to IPFS.
+
+**Swarm (primary).** Run a Bee node — locally during dev, on a small VPS for prod — and set:
+
+```bash
+SWARM_BEE_URL=https://your-bee-node.example      # the Bee API endpoint
+SWARM_POSTAGE_BATCH_ID=…                         # purchased once, stamps subsequent uploads
+```
+
+Buy a postage batch through your Bee node (`POST /stamps/<amount>/<depth>`) — a one-time payment in xBZZ that covers many uploads.
+
+**IPFS (fallback).** If Swarm isn't configured or the Bee node is unreachable, the publisher falls back to pinning via Pinata:
 
 1. Sign up at [pinata.cloud](https://app.pinata.cloud) (free tier covers ~1 GB).
 2. Create an API key with the `pinFileToIPFS` scope. Copy the JWT.
 3. Set `PINATA_JWT=eyJ…` in Vercel env.
-4. Redeploy. The "PUBLISH TO IPFS" toggle on `/me/edit` now writes a pinned CID to the user's `contenthash` ENS record.
 
-Profiles render a "served from IPFS" badge linking to a public IPFS gateway, so anyone can verify the same content without trusting your app.
+Either backend produces an ENSIP-7 `contenthash` written to the user's subname. Profiles render a "served from Swarm" / "served from IPFS" badge linking to a public gateway, so anyone can verify the same content without trusting your app.
 
 > Note: `<name>.<city>connect.eth.limo` URLs **don't render in browsers** — eth.limo's wildcard cert only covers `*.eth.limo`, not three-level subdomains like `*.<parent>.eth.limo`. This is an eth.limo platform constraint, not something you can fix from the resolver. Mainnet ENS resolution itself works fine; the IPFS gateway URL on each profile (linked from the badge) is the censorship-resistant public view.
 
