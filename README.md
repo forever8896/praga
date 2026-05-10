@@ -2,7 +2,7 @@
 
 **A peer-to-peer marketplace for human favors. Reputation belongs to the human, not the platform.**
 
-Built for ETHPrague 2026. Live at **<https://pragueconnect-azure.vercel.app>**.
+Built for ETHPrague 2026. Live at **https://www.pragueconnect.xyz/**.
 
 > *"Like Craigslist, if Craigslist were a guild ledger from Rudolfine Prague — every name a sealed inscription, every gift a wax stamp, every receipt a chiseled patent."*
 
