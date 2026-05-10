@@ -61,7 +61,24 @@ interface ScannedEntry extends BulletinEntry {
 
 const SWEEP_GAS_BUFFER_WEI = BigInt(50_000) * BigInt(parseGwei("0.5"));
 
-export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | null; mainAddress: `0x${string}` | null }) {
+export interface StealthInboxScanSummary {
+  /** Sum of current balances at every bulletin-listed stealth address. */
+  totalBalanceWei: bigint;
+  /** Number of stealth addresses with a non-zero balance. */
+  nonZeroCount: number;
+  /** Total bulletin entries (anchored or not). */
+  entryCount: number;
+}
+
+export function StealthInbox({
+  ensLabel,
+  mainAddress,
+  onScanSummary,
+}: {
+  ensLabel: string | null;
+  mainAddress: `0x${string}` | null;
+  onScanSummary?: (summary: StealthInboxScanSummary) => void;
+}) {
   const { authenticated } = usePrivy();
   const { accessToken } = useAccessToken();
   const { signMessage } = useSignMessage();
@@ -104,7 +121,13 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
           setScanErr(data.error ?? "bulletin-failed");
           return;
         }
-        setEntries(data.entries ?? []);
+        const entryList = data.entries ?? [];
+        setEntries(entryList);
+        // Surface entry count immediately so the parent can show "n stealth
+        // addresses minted" even before balance scan completes.
+        if (entryList.length === 0 && onScanSummary) {
+          onScanSummary({ totalBalanceWei: BigInt(0), nonZeroCount: 0, entryCount: 0 });
+        }
       } catch (e) {
         if (!cancelled) setScanErr(e instanceof Error ? e.message : "bulletin-failed");
       }
@@ -112,7 +135,18 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
     return () => {
       cancelled = true;
     };
-  }, [authenticated, accessToken, ensLabel]);
+  }, [authenticated, accessToken, ensLabel, onScanSummary]);
+
+  // --- auto-scan once entries land --------------------------------------
+  // Without this, the wallet-view headline shows 0 ETH stealth received until
+  // the user clicks "scan" inside this panel. Auto-firing the same code path
+  // keeps the gas-free read but shows the right numbers up-front.
+  useEffect(() => {
+    if (!entries || entries.length === 0) return;
+    if (scanned !== null || scanning) return;
+    void onScan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries]);
 
   // --- vault loading ------------------------------------------------------
   const loadVaultBalance = async (address: `0x${string}`) => {
@@ -160,6 +194,18 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
         }),
       );
       setScanned(balances);
+      // Surface aggregate totals to parent so the headline wallet stats can
+      // include stealth-routed receipts. Without this, "Received" reads 0 ETH
+      // for any user whose tips landed exclusively at rotated addresses.
+      if (onScanSummary) {
+        const totalBalanceWei = balances.reduce((sum, e) => sum + e.balanceWei, BigInt(0));
+        const nonZeroCount = balances.filter((e) => e.balanceWei > BigInt(0)).length;
+        onScanSummary({
+          totalBalanceWei,
+          nonZeroCount,
+          entryCount: entries.length,
+        });
+      }
     } catch (e) {
       setScanErr(e instanceof Error ? e.message : "scan-failed");
     } finally {
@@ -215,6 +261,44 @@ export function StealthInbox({ ensLabel, mainAddress }: { ensLabel: string | nul
         }
       }
       setSweepResults(results);
+      // Persist `swept: true` on the bulletin so subsequent sessions don't
+      // re-list these addresses as sweepable. Without this the UI relies on
+      // "balance == 0" alone, which mis-classifies an entry that received a
+      // new tip after the sweep tx as still-pending. Best-effort — the sweep
+      // itself already succeeded, marking is a UX nicety.
+      if (ensLabel && results.length > 0 && accessToken) {
+        try {
+          await fetch(`/api/stealth/mark-swept?label=${encodeURIComponent(ensLabel)}`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ stealthAddresses: results.map((r) => r.stealthAddress) }),
+          });
+          // Patch local entries so the UI reflects the new state without a refetch.
+          setEntries((prev) =>
+            prev
+              ? prev.map((e) =>
+                  results.some((r) => r.stealthAddress.toLowerCase() === e.stealthAddress.toLowerCase())
+                    ? { ...e, swept: true }
+                    : e,
+                )
+              : prev,
+          );
+          setScanned((prev) =>
+            prev
+              ? prev.map((e) =>
+                  results.some((r) => r.stealthAddress.toLowerCase() === e.stealthAddress.toLowerCase())
+                    ? { ...e, swept: true }
+                    : e,
+                )
+              : prev,
+          );
+        } catch {
+          /* swept flag persistence is best-effort */
+        }
+      }
       // Refresh vault balance so the new total appears.
       await loadVaultBalance(vault.address);
     } catch (e) {

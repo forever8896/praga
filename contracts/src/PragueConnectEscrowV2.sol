@@ -49,6 +49,7 @@ contract PragueConnectEscrowV2 {
         address workerKey;          // address derived from worker's stealth spending pubkey
         uint96 amount;
         uint40 deliveredAt;
+        uint40 acceptedAt;          // timestamp Albedo opened — gates funder's cancelByFunder
         Phase phase;
         address stealthRecipient;
         bytes ephemeralPubKey;
@@ -60,18 +61,29 @@ contract PragueConnectEscrowV2 {
     event TaskDelivered(bytes32 indexed taskId);
     event TaskReleased(bytes32 indexed taskId, uint8 rating, bytes32 reputationCommitment);
     event TaskRefunded(bytes32 indexed taskId);
+    /// @dev Distinguished from Refunded so analytics can tell "funder pulled out
+    ///      before worker accepted" (Refunded) from "worker accepted then ghosted"
+    ///      (Cancelled). Both terminate the task and return funds to funder.
+    event TaskCancelled(bytes32 indexed taskId);
 
     error WrongPhase(Phase have, Phase want);
     error NotFunder();
     error NotPartyOrTimeout();
     error InvalidSignature();
     error ZeroAmount();
+    error ZeroAddress();
     error AlreadyExists();
     error InvalidRating();
     error PayoutFailed();
     error AlreadyConsumed();
+    error TooEarly();
 
     uint40 public constant DELIVERY_GRACE = 24 hours;
+    /// @notice Grace from Albedo (worker accepted) to when the funder can
+    ///         unilaterally cancel a stalled task and reclaim funds. Caps the
+    ///         "worker accepts then ghosts" failure mode where v1 left funder
+    ///         with zero recourse.
+    uint40 public constant ACCEPT_TO_DELIVER_GRACE = 7 days;
 
     address public immutable announcer;
     bytes32 public immutable domainSeparator;
@@ -104,12 +116,18 @@ contract PragueConnectEscrowV2 {
     ///         signature with their spending privkey ecrecovers to.
     function fund(bytes32 taskId, address workerKey) external payable {
         if (msg.value == 0) revert ZeroAmount();
+        // address(0) would lock the funds permanently — _verifySigner would
+        // reject all sigs (signer == address(0) on recovery failure is the
+        // sentinel for "bad sig"). Refund() is still available in Nigredo,
+        // but a foot-gun is a foot-gun.
+        if (workerKey == address(0)) revert ZeroAddress();
         if (tasks[taskId].phase != Phase.None) revert AlreadyExists();
         tasks[taskId] = Task({
             funder: msg.sender,
             workerKey: workerKey,
             amount: uint96(msg.value),
             deliveredAt: 0,
+            acceptedAt: 0,
             phase: Phase.Nigredo,
             stealthRecipient: address(0),
             ephemeralPubKey: "",
@@ -136,6 +154,7 @@ contract PragueConnectEscrowV2 {
         consumed[ACCEPT_TYPEHASH][taskId] = true;
 
         t.phase = Phase.Albedo;
+        t.acceptedAt = uint40(block.timestamp);
         t.stealthRecipient = stealthRecipient;
         t.ephemeralPubKey = ephemeralPubKey;
         t.viewTag = viewTag;
@@ -196,6 +215,24 @@ contract PragueConnectEscrowV2 {
         t.phase = Phase.Refunded;
         uint96 amt = t.amount;
         emit TaskRefunded(taskId);
+        (bool ok, ) = t.funder.call{ value: amt }("");
+        if (!ok) revert PayoutFailed();
+    }
+
+    /// @notice Funder reclaims funds from a stalled task. Only valid in Albedo
+    ///         (worker accepted but never delivered) and only after
+    ///         ACCEPT_TO_DELIVER_GRACE has elapsed since accept. Closes the v1
+    ///         hole where a worker accepting and ghosting trapped funds forever.
+    /// @dev    msg.sender must be the funder. No worker-sig path: if worker is
+    ///         present they can deliver to unblock the regular release flow.
+    function cancelByFunder(bytes32 taskId) external {
+        Task storage t = tasks[taskId];
+        if (t.phase != Phase.Albedo) revert WrongPhase(t.phase, Phase.Albedo);
+        if (msg.sender != t.funder) revert NotFunder();
+        if (block.timestamp < uint256(t.acceptedAt) + ACCEPT_TO_DELIVER_GRACE) revert TooEarly();
+        t.phase = Phase.Refunded;
+        uint96 amt = t.amount;
+        emit TaskCancelled(taskId);
         (bool ok, ) = t.funder.call{ value: amt }("");
         if (!ok) revert PayoutFailed();
     }

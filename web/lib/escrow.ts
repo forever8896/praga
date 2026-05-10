@@ -44,6 +44,8 @@ export const ESCROW_V2_ABI = [
   { type: "function", name: "releaseWithSig", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "rating", type: "uint8" }, { name: "sig", type: "bytes" }], outputs: [] },
   { type: "function", name: "releaseAsFunder", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }, { name: "rating", type: "uint8" }], outputs: [] },
   { type: "function", name: "refund", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }], outputs: [] },
+  { type: "function", name: "cancelByFunder", stateMutability: "nonpayable", inputs: [{ name: "taskId", type: "bytes32" }], outputs: [] },
+  { type: "function", name: "ACCEPT_TO_DELIVER_GRACE", stateMutability: "view", inputs: [], outputs: [{ type: "uint40" }] },
   {
     type: "function",
     name: "tasks",
@@ -54,6 +56,7 @@ export const ESCROW_V2_ABI = [
       { name: "workerKey", type: "address" },
       { name: "amount", type: "uint96" },
       { name: "deliveredAt", type: "uint40" },
+      { name: "acceptedAt", type: "uint40" },
       { name: "phase", type: "uint8" },
       { name: "stealthRecipient", type: "address" },
       { name: "ephemeralPubKey", type: "bytes" },
@@ -105,16 +108,31 @@ export interface OnchainTask {
   worker: `0x${string}`;
   amount: bigint;
   deliveredAt: number;
+  /** Set when worker accepts (Albedo). Used by funder's cancel-grace path
+   *  to compute when ACCEPT_TO_DELIVER_GRACE has elapsed. v2-only field —
+   *  reads against v1 contracts return 0 here. */
+  acceptedAt: number;
   phase: Phase;
   stealthRecipient: `0x${string}`;
   ephemeralPubKey: `0x${string}`;
   viewTag: `0x${string}`;
 }
 
-/** Deterministic taskId for a thread between two ENS-bound addresses.
- *  Both sides of the conversation compute the same id regardless of who funds. */
-export function deriveTaskId(addrA: `0x${string}`, addrB: `0x${string}`, salt = "pragueconnect.thread.v1"): `0x${string}` {
-  const [first, second] = [addrA.toLowerCase() as `0x${string}`, addrB.toLowerCase() as `0x${string}`].sort();
+/** Deterministic taskId for a thread between two parties.
+ *
+ *  Privacy: the inputs MUST be each party's stealth-spending-key-derived
+ *  address (`metaAddressToWorkerKey(meta)`) when available, NOT their main
+ *  EOAs. Reason: TaskFunded already commits the worker's spending-key address
+ *  publicly; using the same value here adds no new on-chain link. Hashing the
+ *  worker's main EOA into the taskId would let an analyst confirm a guessed
+ *  sender↔worker pair by re-computing the hash — undoing the v2 sig-auth
+ *  privacy property.
+ *
+ *  Callers in `escrow-panel.tsx` derive both keys via `metaAddressToWorkerKey`
+ *  and only fall back to EOA when a party hasn't published a meta-address.
+ *  Sorting keeps the taskId stable regardless of who funds. */
+export function deriveTaskId(keyA: `0x${string}`, keyB: `0x${string}`, salt = "pragueconnect.thread.v2"): `0x${string}` {
+  const [first, second] = [keyA.toLowerCase() as `0x${string}`, keyB.toLowerCase() as `0x${string}`].sort();
   return keccak256(encodePacked(["address", "address", "string"], [first, second, salt]));
 }
 
@@ -140,11 +158,23 @@ export async function loadTask(taskId: `0x${string}`): Promise<OnchainTask | nul
       functionName: "tasks",
       args: [taskId],
     });
+    if (v2) {
+      const [funder, worker, amount, deliveredAt, acceptedAt, phase, stealthRecipient, ephemeralPubKey, viewTag] =
+        result as readonly [
+          `0x${string}`, `0x${string}`, bigint, number, number, number, `0x${string}`, `0x${string}`, `0x${string}`,
+        ];
+      return {
+        funder, worker, amount, deliveredAt, acceptedAt,
+        phase: phase as Phase, stealthRecipient, ephemeralPubKey, viewTag,
+      };
+    }
+    // v1 has no acceptedAt slot.
     const [funder, worker, amount, deliveredAt, phase, stealthRecipient, ephemeralPubKey, viewTag] = result as readonly [
       `0x${string}`, `0x${string}`, bigint, number, number, `0x${string}`, `0x${string}`, `0x${string}`,
     ];
     return {
-      funder, worker, amount, deliveredAt, phase: phase as Phase, stealthRecipient, ephemeralPubKey, viewTag,
+      funder, worker, amount, deliveredAt, acceptedAt: 0,
+      phase: phase as Phase, stealthRecipient, ephemeralPubKey, viewTag,
     };
   } catch {
     return null;

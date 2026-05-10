@@ -65,8 +65,13 @@ contract PragueConnectEscrowV2Test is Test {
     }
 
     function _phaseOf(bytes32 id) internal view returns (PragueConnectEscrowV2.Phase) {
-        (, , , , PragueConnectEscrowV2.Phase p, , , ) = escrow.tasks(id);
+        (, , , , , PragueConnectEscrowV2.Phase p, , , ) = escrow.tasks(id);
         return p;
+    }
+
+    function _acceptedAtOf(bytes32 id) internal view returns (uint40) {
+        (, , , , uint40 a, , , , ) = escrow.tasks(id);
+        return a;
     }
 
     function test_HappyPath_SignedFlow_FunderRelays() public {
@@ -257,8 +262,102 @@ contract PragueConnectEscrowV2Test is Test {
         escrow.acceptWithSig(taskId, stealth, ephPub, viewTag, acceptSig);
         // Workers only signature is reflected in storage; msg.sender of the
         // accept tx (random) has no privileged role.
-        (, address storedKey, , , , address storedStealth, , ) = escrow.tasks(taskId);
+        (, address storedKey, , , , , address storedStealth, , ) = escrow.tasks(taskId);
         assertEq(storedKey, workerKey);
         assertEq(storedStealth, stealth);
+    }
+
+    // ---- new in v2.1 (workerKey != 0, cancelByFunder, acceptedAt) ----
+
+    function test_FundRevertsOnZeroWorkerKey() public {
+        vm.prank(lucia);
+        vm.expectRevert(PragueConnectEscrowV2.ZeroAddress.selector);
+        escrow.fund{ value: 0.01 ether }(taskId, address(0));
+    }
+
+    function test_AcceptedAtRecordedOnAccept() public {
+        vm.prank(lucia);
+        escrow.fund{ value: 0.01 ether }(taskId, workerKey);
+        bytes memory acceptSig = _signAccept(workerKeyPk, stealth, ephPub, viewTag);
+        uint40 before = _acceptedAtOf(taskId);
+        assertEq(before, 0);
+        vm.warp(1_700_000_000);
+        escrow.acceptWithSig(taskId, stealth, ephPub, viewTag, acceptSig);
+        assertEq(_acceptedAtOf(taskId), uint40(1_700_000_000));
+    }
+
+    function test_CancelByFunderRevertsBeforeGrace() public {
+        vm.prank(lucia);
+        escrow.fund{ value: 0.01 ether }(taskId, workerKey);
+        bytes memory acceptSig = _signAccept(workerKeyPk, stealth, ephPub, viewTag);
+        escrow.acceptWithSig(taskId, stealth, ephPub, viewTag, acceptSig);
+
+        vm.prank(lucia);
+        vm.expectRevert(PragueConnectEscrowV2.TooEarly.selector);
+        escrow.cancelByFunder(taskId);
+
+        // 6 days in: still too early (grace is 7d)
+        vm.warp(block.timestamp + 6 days);
+        vm.prank(lucia);
+        vm.expectRevert(PragueConnectEscrowV2.TooEarly.selector);
+        escrow.cancelByFunder(taskId);
+    }
+
+    function test_CancelByFunderSucceedsAfterGrace() public {
+        vm.prank(lucia);
+        escrow.fund{ value: 0.01 ether }(taskId, workerKey);
+        bytes memory acceptSig = _signAccept(workerKeyPk, stealth, ephPub, viewTag);
+        escrow.acceptWithSig(taskId, stealth, ephPub, viewTag, acceptSig);
+
+        uint256 luciaBefore = lucia.balance;
+        vm.warp(block.timestamp + 7 days + 1);
+        vm.prank(lucia);
+        escrow.cancelByFunder(taskId);
+        assertEq(lucia.balance - luciaBefore, 0.01 ether);
+        assertEq(uint8(_phaseOf(taskId)), uint8(PragueConnectEscrowV2.Phase.Refunded));
+    }
+
+    function test_CancelByFunderRevertsForNonFunder() public {
+        vm.prank(lucia);
+        escrow.fund{ value: 0.01 ether }(taskId, workerKey);
+        bytes memory acceptSig = _signAccept(workerKeyPk, stealth, ephPub, viewTag);
+        escrow.acceptWithSig(taskId, stealth, ephPub, viewTag, acceptSig);
+        vm.warp(block.timestamp + 8 days);
+
+        address randomCaller = makeAddr("random-caller");
+        vm.deal(randomCaller, 1 ether);
+        vm.prank(randomCaller);
+        vm.expectRevert(PragueConnectEscrowV2.NotFunder.selector);
+        escrow.cancelByFunder(taskId);
+    }
+
+    function test_CancelByFunderRevertsOutsideAlbedo() public {
+        vm.prank(lucia);
+        escrow.fund{ value: 0.01 ether }(taskId, workerKey);
+        // still Nigredo — not Albedo
+        vm.warp(block.timestamp + 8 days);
+        vm.prank(lucia);
+        vm.expectRevert();
+        escrow.cancelByFunder(taskId);
+    }
+
+    function test_DeliverAfterPartialGraceUnblocksRelease() public {
+        // Worker delivering before the funder's cancel-grace expires should
+        // close the cancel path: phase moves to Citrinitas so cancelByFunder
+        // reverts on phase check.
+        vm.prank(lucia);
+        escrow.fund{ value: 0.01 ether }(taskId, workerKey);
+        bytes memory acceptSig = _signAccept(workerKeyPk, stealth, ephPub, viewTag);
+        escrow.acceptWithSig(taskId, stealth, ephPub, viewTag, acceptSig);
+
+        vm.warp(block.timestamp + 6 days);
+        bytes memory deliverSig = _signDeliver(workerKeyPk);
+        escrow.deliverWithSig(taskId, deliverSig);
+
+        // Even past the grace, cancel is no longer valid — release path takes over.
+        vm.warp(block.timestamp + 2 days);
+        vm.prank(lucia);
+        vm.expectRevert();
+        escrow.cancelByFunder(taskId);
     }
 }

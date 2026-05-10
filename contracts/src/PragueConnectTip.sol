@@ -13,6 +13,16 @@ pragma solidity ^0.8.28;
 ///         When a user is reciprocating to the person who introduced them, both stealth
 ///         addresses can resolve to the same person; the dual-receipt is still meaningful
 ///         pedagogy about how the mechanic works for third-party tips.
+///
+/// @dev v2 (2026-05-10):
+///       - ERC-5564 metadata is now `bytes1 viewTag || bytes4(0xeeeeeeee) || uint256 amount`
+///         per the Umbra/ScopeLift convention for native-ETH transfers. v1 emitted only
+///         `viewTag || bytes32(amount)`, which third-party scanners (FluidKey/ScopeLift)
+///         couldn't classify as a value-bearing announcement.
+///       - The `memo` field is no longer emitted on-chain. Memos that name a recipient
+///         or describe the favour leak attribution because `from` is the sender's EOA.
+///         The function still accepts `memo` for ABI continuity but only logs a 32-byte
+///         keccak commitment in the event — the plaintext stays client-side (XMTP).
 interface IERC5564Announcer {
     function announce(
         uint256 schemeId,
@@ -31,13 +41,19 @@ contract PragueConnectTip {
     /// @notice Recipient's share when tipWithReferral is used. Inviter gets the remainder.
     uint256 public constant RECIPIENT_SHARE_PCT = 95;
 
+    /// @dev ERC-5564 native-ETH function signature marker. Standard scanners
+    ///      look for this 4-byte tag immediately after the viewTag in metadata
+    ///      to classify an announcement as a value-bearing native-ETH transfer.
+    ///      Source: Umbra v2 / ScopeLift ERC-5564 helpers.
+    bytes4 internal constant ETH_TRANSFER_FUNCSIG = 0xeeeeeeee;
+
     event Tipped(
         address indexed from,
         address indexed stealthRecipient,
         uint256 amount,
         bytes ephemeralPubKey,
         bytes1 viewTag,
-        string memo
+        bytes32 memoHash
     );
 
     /// @notice Companion event when a tip carries an inviter finder's mark.
@@ -70,10 +86,17 @@ contract PragueConnectTip {
         if (msg.value == 0) revert ZeroAmount();
         if (stealthRecipient == address(0)) revert ZeroAddress();
 
-        bytes memory metadata = abi.encodePacked(viewTag, bytes32(uint256(msg.value)));
+        // bytes1 viewTag || bytes4 0xeeeeeeee || uint256 amount — standard
+        // ERC-5564 layout for native-ETH transfers, recognised by third-party
+        // scanners (FluidKey, ScopeLift) without coordination with us.
+        bytes memory metadata = abi.encodePacked(viewTag, ETH_TRANSFER_FUNCSIG, msg.value);
         IERC5564Announcer(announcer).announce(SCHEME_ID, stealthRecipient, ephemeralPubKey, metadata);
 
-        emit Tipped(msg.sender, stealthRecipient, msg.value, ephemeralPubKey, viewTag, memo);
+        // Hash-commit to the memo only; plaintext stays client-side (XMTP /
+        // recipient receipt page) so a public on-chain trail can't pair the
+        // sender's EOA with a description that hints at the recipient.
+        bytes32 memoHash = bytes(memo).length == 0 ? bytes32(0) : keccak256(bytes(memo));
+        emit Tipped(msg.sender, stealthRecipient, msg.value, ephemeralPubKey, viewTag, memoHash);
 
         (bool ok, ) = stealthRecipient.call{value: msg.value}("");
         if (!ok) revert PayoutFailed();
@@ -99,13 +122,11 @@ contract PragueConnectTip {
         uint256 recipientShare = (msg.value * RECIPIENT_SHARE_PCT) / 100;
         uint256 inviterShare = msg.value - recipientShare;
 
-        bytes memory recipientMeta = abi.encodePacked(recipientViewTag, bytes32(recipientShare));
-        IERC5564Announcer(announcer).announce(SCHEME_ID, recipientStealth, recipientEphPubKey, recipientMeta);
-        emit Tipped(msg.sender, recipientStealth, recipientShare, recipientEphPubKey, recipientViewTag, memo);
-
-        bytes memory inviterMeta = abi.encodePacked(inviterViewTag, bytes32(inviterShare));
-        IERC5564Announcer(announcer).announce(SCHEME_ID, inviterStealth, inviterEphPubKey, inviterMeta);
-        emit Tipped(msg.sender, inviterStealth, inviterShare, inviterEphPubKey, inviterViewTag, "");
+        // Each leg lives in its own scope so locals (the metadata bytes) drop
+        // off the stack before the next leg pushes new ones — the explicit-
+        // memoHash addition tipped this fn into "stack too deep" territory.
+        _emitLeg(recipientStealth, recipientEphPubKey, recipientViewTag, recipientShare, _hashMemo(memo));
+        _emitLeg(inviterStealth, inviterEphPubKey, inviterViewTag, inviterShare, bytes32(0));
 
         emit Referral(msg.sender, recipientStealth, inviterStealth, recipientShare, inviterShare);
 
@@ -113,5 +134,25 @@ contract PragueConnectTip {
         if (!okR) revert PayoutFailed();
         (bool okI, ) = inviterStealth.call{value: inviterShare}("");
         if (!okI) revert PayoutFailed();
+    }
+
+    function _hashMemo(string calldata memo) internal pure returns (bytes32) {
+        return bytes(memo).length == 0 ? bytes32(0) : keccak256(bytes(memo));
+    }
+
+    /// @dev Internal helper for `tipWithReferral`. Announces via ERC-5564 and
+    ///      emits `Tipped` for one leg of a split tip. Doing this inline blew
+    ///      the stack in the calling function — pulling it out costs one
+    ///      JUMP + JUMPI per leg, well under the ~37 gas cost of the announce.
+    function _emitLeg(
+        address payable stealth,
+        bytes calldata ephPubKey,
+        bytes1 viewTag,
+        uint256 amount,
+        bytes32 memoHash
+    ) internal {
+        bytes memory metadata = abi.encodePacked(viewTag, ETH_TRANSFER_FUNCSIG, amount);
+        IERC5564Announcer(announcer).announce(SCHEME_ID, stealth, ephPubKey, metadata);
+        emit Tipped(msg.sender, stealth, amount, ephPubKey, viewTag, memoHash);
     }
 }

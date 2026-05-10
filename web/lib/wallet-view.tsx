@@ -16,7 +16,7 @@ import {
 } from "./ornaments";
 import { useT } from "./i18n";
 import { env } from "./env";
-import { StealthInbox } from "./stealth-inbox";
+import { StealthInbox, type StealthInboxScanSummary } from "./stealth-inbox";
 
 function chainLabel(chainId: number): string {
   if (chainId === 8453) return "base mainnet";
@@ -69,6 +69,10 @@ export function WalletView() {
   const [myName, setMyName] = useState<MyName | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  // Aggregated by StealthInbox once it scans every bulletin-listed stealth
+  // address. Surfaced into the headline stats so users whose tips landed
+  // exclusively at rotated addresses don't see a misleading "0 ETH received."
+  const [stealthSummary, setStealthSummary] = useState<StealthInboxScanSummary | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -119,8 +123,12 @@ export function WalletView() {
     return Number(balanceWei) / 1e18;
   }, [balanceWei]);
 
-  const totalReceivedEth = received.reduce((sum, r) => sum + (Number.parseFloat(r.amountEth) || 0), 0);
+  const totalDirectReceivedEth = received.reduce((sum, r) => sum + (Number.parseFloat(r.amountEth) || 0), 0);
   const totalSentEth = sent.reduce((sum, r) => sum + (Number.parseFloat(r.amountEth) || 0), 0);
+  const stealthReceivedEth = stealthSummary ? Number(stealthSummary.totalBalanceWei) / 1e18 : 0;
+  // Combined headline number: tips that came in to the main EOA plus the
+  // current liquid balance at every rotated stealth address.
+  const totalReceivedEth = totalDirectReceivedEth + stealthReceivedEth;
   const hasStealth = !!myName?.text_records?.["stealth-meta-address"];
 
   if (!ready) {
@@ -167,7 +175,11 @@ export function WalletView() {
                   label={t("wallet.received")}
                   amount={totalReceivedEth.toFixed(5)}
                   unit="ETH"
-                  sub={`≈ ${fx.formatFromEth(totalReceivedEth)} · ${received.length} ${t("profile.wallSealed")}`}
+                  sub={
+                    stealthSummary && stealthSummary.entryCount > 0
+                      ? `${received.length} direct · ${stealthSummary.nonZeroCount}/${stealthSummary.entryCount} stealth · ≈ ${fx.formatFromEth(totalReceivedEth)}`
+                      : `≈ ${fx.formatFromEth(totalReceivedEth)} · ${received.length} ${t("profile.wallSealed")}`
+                  }
                   accent="var(--verdigris)"
                 />
                 <Stat
@@ -200,8 +212,13 @@ export function WalletView() {
             )}
 
             {/* Private receipts + vault + key-custody — bulletin reader,
-                stealth-balance scan, sweep-to-vault, embedded-wallet export */}
-            <StealthInbox ensLabel={myName?.label ?? null} mainAddress={address ?? null} />
+                stealth-balance scan, sweep-to-vault, embedded-wallet export.
+                The scan summary feeds the headline "Received" stat above. */}
+            <StealthInbox
+              ensLabel={myName?.label ?? null}
+              mainAddress={address ?? null}
+              onScanSummary={setStealthSummary}
+            />
 
             {err && (
               <div className="t-italic" style={{ fontSize: 13, color: "var(--vermilion)", textAlign: "center", marginTop: 14 }}>

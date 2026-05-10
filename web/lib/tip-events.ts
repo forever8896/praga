@@ -18,8 +18,11 @@ export interface TipReceipt {
   recipientEns?: string;
 }
 
+// v2 (2026-05-10): memo is now a bytes32 keccak commitment, not the plaintext.
+// The plaintext lives off-chain (XMTP, recipient's bulletin) so an analyst
+// can't read sender-supplied descriptions paired with the sender's EOA.
 const TIPPED_EVENT = parseAbiItem(
-  "event Tipped(address indexed from, address indexed stealthRecipient, uint256 amount, bytes ephemeralPubKey, bytes1 viewTag, string memo)",
+  "event Tipped(address indexed from, address indexed stealthRecipient, uint256 amount, bytes ephemeralPubKey, bytes1 viewTag, bytes32 memoHash)",
 );
 
 interface QueryOpts {
@@ -102,7 +105,7 @@ export async function loadTipReceipts(opts: QueryOpts = {}): Promise<TipReceipt[
         stealthRecipient: a.stealthRecipient,
         amountWei,
         amountEth: (Number(amountWei) / 1e18).toFixed(6),
-        memo: a.memo ?? "",
+        memo: "", // plaintext lives off-chain now; on-chain is bytes32 commitment
         fromEns: ensByAddr.get(a.from.toLowerCase()),
         recipientEns: ensByAddr.get(a.stealthRecipient.toLowerCase()),
       } as TipReceipt;

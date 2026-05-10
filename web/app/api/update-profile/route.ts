@@ -22,6 +22,10 @@ const ALLOWED_FIELDS = new Set([
   "skills",
   "offers",
   "stealth-meta-address",
+  // Toggled from /me/edit (and seeded "true" at onboarding). The CCIP gateway
+  // only rotates addr() when this flag is "true" alongside a valid meta —
+  // missing it from this set silently kills the whole rotation feature.
+  "stealth-rotate-addr",
   // ENSIP-25 agent delegation: a JSON attestation describing an authorised
   // agent (the "familiar") and what scopes it may act on the human's behalf.
   "agent-registration",

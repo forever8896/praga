@@ -32,6 +32,7 @@ import {
   metaAddressToWorkerKey,
   PRAGUECONNECT_STEALTH_MESSAGE,
 } from "./stealth";
+import { useAccessToken } from "./use-access-token";
 import { WaxSeal, FleurDeLis } from "./ornaments";
 import { useT } from "./i18n";
 
@@ -56,12 +57,59 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
   const { authenticated } = usePrivy();
   const { sendTransaction } = useSendTransaction();
   const { signMessage } = useSignMessage();
+  const { accessToken: identityToken } = useAccessToken();
   const t = useT();
 
+  // Fetch our own stealth meta-address so the taskId can commit to our
+  // spending-key-derived address rather than our main EOA. Without this the
+  // taskId leaks `keccak256(funderEOA, workerEOA)` — re-computable by anyone
+  // who suspects the two parties.
+  const [myStealthMeta, setMyStealthMeta] = useState<string>("");
+  useEffect(() => {
+    if (!authenticated || !identityToken) {
+      setMyStealthMeta("");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/my-name", {
+          headers: { Authorization: `Bearer ${identityToken}` },
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { text_records?: Record<string, string> };
+        if (!cancelled) setMyStealthMeta(data.text_records?.["stealth-meta-address"] ?? "");
+      } catch {
+        /* leave empty — taskId falls back to EOA */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, identityToken]);
+
+  /** Per-party canonical key for the taskId hash. Prefers the stealth-spending-
+   *  key-derived address (shared with TaskFunded.workerKey on-chain) over the
+   *  main EOA, so the taskId never adds new linkability beyond what's already
+   *  on-chain. Falls back to EOA when no meta is published yet. */
+  const canonicalKey = (addr: `0x${string}` | null, meta: string): `0x${string}` | null => {
+    if (!addr) return null;
+    if (meta?.startsWith("st:eth:")) {
+      try {
+        return metaAddressToWorkerKey(meta);
+      } catch {
+        /* malformed meta; fall back */
+      }
+    }
+    return addr;
+  };
+
   const taskId = useMemo(() => {
-    if (!myAddress || !peerAddress) return null;
-    return deriveTaskId(myAddress, peerAddress);
-  }, [myAddress, peerAddress]);
+    const myKey = canonicalKey(myAddress, myStealthMeta);
+    const peerKey = canonicalKey(peerAddress, peerStealthMeta);
+    if (!myKey || !peerKey) return null;
+    return deriveTaskId(myKey, peerKey);
+  }, [myAddress, peerAddress, myStealthMeta, peerStealthMeta]);
 
   const [task, setTask] = useState<OnchainTask | null>(null);
   const [loading, setLoading] = useState(false);
@@ -270,6 +318,33 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
     }
   };
 
+  /** v2-only: funder reclaims funds from a stalled Albedo task once the
+   *  ACCEPT_TO_DELIVER_GRACE window has passed. v1 has no equivalent — funder
+   *  is permanently stuck if worker accepts and ghosts. */
+  const onCancel = async () => {
+    if (!v2) return;
+    setErr(null);
+    setActing("cancel");
+    try {
+      const data = encodeFunctionData({
+        abi: ESCROW_V2_ABI,
+        functionName: "cancelByFunder",
+        args: [taskId],
+      });
+      await sendTx(data);
+      await onSystemMessage?.(`📜 Funder cancelled — funds returned. The seal was broken without delivery.`);
+      setTimeout(refresh, 2500);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "cancel-failed");
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const ACCEPT_TO_DELIVER_GRACE_SECS = 7 * 24 * 60 * 60;
+  const cancelUnlocksAt = task && task.acceptedAt > 0 ? task.acceptedAt + ACCEPT_TO_DELIVER_GRACE_SECS : 0;
+  const canCancelNow = v2 && task && phase === 2 && isFunder && cancelUnlocksAt > 0 && Date.now() / 1000 >= cancelUnlocksAt;
+
   if (!authenticated) {
     return null;
   }
@@ -301,7 +376,20 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
   } else if (phase === 2 && isWorker) {
     action = <button onClick={onDeliver} disabled={acting === "deliver"} style={btn("var(--ink)")}>{acting === "deliver" ? "…" : t("opus.deliver")}</button>;
   } else if (phase === 2 && isFunder) {
-    action = <span className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)" }}>{peerEns} {t("opus.atWork")}</span>;
+    action = (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)" }}>{peerEns} {t("opus.atWork")}</span>
+        {canCancelNow ? (
+          <button onClick={onCancel} disabled={acting === "cancel"} style={btn("var(--vermilion)")}>
+            {acting === "cancel" ? "…" : "RECLAIM · GRACE EXPIRED"}
+          </button>
+        ) : v2 && cancelUnlocksAt > 0 ? (
+          <span className="t-mono" style={{ fontSize: 10, color: "var(--ink-50)" }}>
+            cancel unlocks {new Date(cancelUnlocksAt * 1000).toLocaleString()} if not delivered
+          </span>
+        ) : null}
+      </div>
+    );
   } else if (phase === 3 && isFunder) {
     action = <button onClick={onRelease} disabled={acting === "release"} style={btn("var(--vermilion)")}>{acting === "release" ? "…" : t("opus.release")}</button>;
   } else if (phase === 3 && isWorker) {

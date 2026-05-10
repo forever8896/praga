@@ -150,7 +150,7 @@ contract PragueConnectTipTest is Test {
             "thanks"
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 tippedSig = keccak256("Tipped(address,address,uint256,bytes,bytes1,string)");
+        bytes32 tippedSig = keccak256("Tipped(address,address,uint256,bytes,bytes1,bytes32)");
         bytes32 referralSig = keccak256("Referral(address,address,address,uint256,uint256)");
         uint256 tippedCount = 0;
         uint256 referralCount = 0;
@@ -161,6 +161,77 @@ contract PragueConnectTipTest is Test {
         }
         assertEq(tippedCount, 2, "expected two Tipped events");
         assertEq(referralCount, 1, "expected one Referral event");
+    }
+
+    // ---- new privacy/standards-conformance assertions ----
+
+    function test_Tip_MetadataIsCanonicalErc5564Layout() public {
+        // Expect: bytes1 viewTag || bytes4 0xeeeeeeee || uint256 amount
+        // = 1 + 4 + 32 = 37 bytes. v1 emitted 1 + 32 = 33 bytes (no funcsig).
+        vm.recordLogs();
+        vm.prank(kilian);
+        tip.tip{value: 0.5 ether}(recipient, recipientEph, recipientTag, "");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 announcedSig = keccak256("Announced(uint256,address,bytes,bytes)");
+        bool found;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length == 0 || logs[i].topics[0] != announcedSig) continue;
+            // Announced(uint256, address, bytes, bytes) — none indexed.
+            (, , , bytes memory metadata) = abi.decode(logs[i].data, (uint256, address, bytes, bytes));
+            assertEq(metadata.length, 37, "metadata should be 1+4+32");
+            // viewTag in slot 0
+            assertEq(metadata[0], recipientTag, "viewTag mismatch");
+            // funcsig 0xeeeeeeee at offset 1..4
+            assertEq(uint8(metadata[1]), 0xee, "funcsig byte 0");
+            assertEq(uint8(metadata[2]), 0xee, "funcsig byte 1");
+            assertEq(uint8(metadata[3]), 0xee, "funcsig byte 2");
+            assertEq(uint8(metadata[4]), 0xee, "funcsig byte 3");
+            // amount at offset 5..36
+            uint256 amt;
+            assembly {
+                amt := mload(add(metadata, 37))
+            }
+            assertEq(amt, 0.5 ether, "amount mismatch");
+            found = true;
+            break;
+        }
+        assertTrue(found, "expected an Announced event");
+    }
+
+    function test_Tip_MemoIsHashedNotPlaintext() public {
+        vm.recordLogs();
+        string memory memo = "for the cookies, alice";
+        vm.prank(kilian);
+        tip.tip{value: 1 ether}(recipient, recipientEph, recipientTag, memo);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 tippedSig = keccak256("Tipped(address,address,uint256,bytes,bytes1,bytes32)");
+        bool found;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length == 0 || logs[i].topics[0] != tippedSig) continue;
+            // Decode non-indexed: amount (uint256), ephemeralPubKey (bytes), viewTag (bytes1), memoHash (bytes32)
+            (, , , bytes32 memoHash) = abi.decode(logs[i].data, (uint256, bytes, bytes1, bytes32));
+            assertEq(memoHash, keccak256(bytes(memo)), "memoHash should be keccak256 of plaintext");
+            found = true;
+            break;
+        }
+        assertTrue(found, "expected a Tipped event");
+    }
+
+    function test_Tip_EmptyMemoEmitsZero() public {
+        vm.recordLogs();
+        vm.prank(kilian);
+        tip.tip{value: 1 ether}(recipient, recipientEph, recipientTag, "");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 tippedSig = keccak256("Tipped(address,address,uint256,bytes,bytes1,bytes32)");
+        bool found;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length == 0 || logs[i].topics[0] != tippedSig) continue;
+            (, , , bytes32 memoHash) = abi.decode(logs[i].data, (uint256, bytes, bytes1, bytes32));
+            assertEq(memoHash, bytes32(0), "empty memo should hash to zero");
+            found = true;
+            break;
+        }
+        assertTrue(found, "expected a Tipped event");
     }
 
     function test_TipWithReferral_SameAddressForBothLegs() public {

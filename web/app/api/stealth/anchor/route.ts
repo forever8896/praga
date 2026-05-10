@@ -104,10 +104,17 @@ export async function POST(req: Request) {
 
   for (const entry of targets) {
     try {
-      // ERC-5564 §3: metadata is opaque; standard scanners read the first
-      // byte as the viewTag. We pass just the viewTag (no payment amount,
-      // no escrow context — this is a "rotation anchor", not a payment).
-      const metadata = encodePacked(["bytes1"], [entry.viewTag]);
+      // ERC-5564 metadata for a rotation-anchor entry. Standard layout for
+      // native-ETH transfers is: viewTag (1B) || 0xeeeeeeee (4B) || amount (32B).
+      // We don't know the future payment amount yet (this is just the rotation
+      // mint, not the actual tip), so we set amount=0. Third-party scanners
+      // still recognise the funcsig marker and surface the entry as a
+      // candidate stealth landing — they can compute real balances at scan
+      // time. v1 emitted only the viewTag, which scanners ignored.
+      const metadata = encodePacked(
+        ["bytes1", "bytes4", "uint256"],
+        [entry.viewTag, "0xeeeeeeee", BigInt(0)],
+      );
       const data = encodeFunctionData({
         abi: ANNOUNCER_ABI,
         functionName: "announce",
