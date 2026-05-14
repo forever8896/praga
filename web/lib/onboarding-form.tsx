@@ -79,6 +79,7 @@ import {
 import { SealedBeat } from "./sealed-beat";
 import { PromiseCard } from "./promise-card";
 import { LivePreviewParchment } from "./live-preview-parchment";
+import { ActivationCard } from "./activation-card";
 
 type ClaimState =
   | "idle"
@@ -87,6 +88,7 @@ type ClaimState =
   | "claiming"
   | "claimed"
   | "sealing-stealth"
+  | "stealth-failed"
   | "fully-sealed"
   | "taken"
   | "error";
@@ -108,6 +110,8 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
   const [claimedInviter, setClaimedInviter] = useState<ClaimedInviter | null>(null);
   const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
   const [showSealedBeat, setShowSealedBeat] = useState(false);
+  const [showActivation, setShowActivation] = useState(false);
+  const [identityToken, setIdentityToken] = useState<string | null>(null);
   const router = useRouter();
   const checkAbort = useRef<AbortController | null>(null);
   const inscriptionStartRef = useRef<number | null>(null);
@@ -294,13 +298,21 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
       pendingSealRef.current = false;
       clearPendingClaim();
 
+      // Stealth seal is its own beat: it requires a SECOND signature, so it
+      // can fail independently of the name claim. Two of eight first-week
+      // users hit this exact failure mode (wallet popup closed / signature
+      // rejected) and ended up with a half-claimed name. Now we surface it
+      // and let them retry instead of pretending success.
+      let stealthOk = false;
+      let stealthErr: string | null = null;
       try {
         setClaimState("sealing-stealth");
         const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
         const keys = derivePragueConnectKeys(signature as `0x${string}`);
         const token = await getAccessToken();
+        setIdentityToken(token ?? null);
         if (token) {
-          await fetch("/api/update-profile", {
+          const sr = await fetch("/api/update-profile", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -315,25 +327,112 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
                 "stealth-rotate-addr": "true",
               },
             }),
-          }).catch(() => {});
+          });
+          if (sr.ok) stealthOk = true;
+          else {
+            const j = await sr.json().catch(() => ({}));
+            stealthErr = j.error ?? "stealth-save-failed";
+          }
+        } else {
+          stealthErr = "no-session";
         }
-        setClaimState("fully-sealed");
-      } catch {
-        setClaimState("fully-sealed");
+      } catch (e) {
+        stealthErr = e instanceof Error ? e.message : "signature-rejected";
       }
+
+      if (!stealthOk) {
+        // Keep the inscription overlay closed; surface the retry card.
+        setClaimState("stealth-failed");
+        setErrorMsg(stealthErr);
+        return;
+      }
+
+      setClaimState("fully-sealed");
       const wait = Math.max(600, inscriptionRemaining(inscriptionStartRef.current));
-      setTimeout(() => setShowSealedBeat(true), wait);
+      setTimeout(() => setShowActivation(true), wait);
     } catch (e) {
       setClaimState("error");
       setErrorMsg(e instanceof Error ? e.message : "The line to Prague was busy.");
     }
   };
 
+  // Retry the stealth signature when the user lands on the half-claimed
+  // state. The name is already in the resolver store — we just need the
+  // meta-address field. On success we slide straight into the activation
+  // card so the moment stays continuous.
+  const onRetryStealth = async () => {
+    if (!name) return;
+    setErrorMsg(null);
+    let stealthOk = false;
+    let stealthErr: string | null = null;
+    try {
+      setClaimState("sealing-stealth");
+      const { signature } = await signMessage({ message: PRAGUECONNECT_STEALTH_MESSAGE });
+      const keys = derivePragueConnectKeys(signature as `0x${string}`);
+      const token = await getAccessToken();
+      setIdentityToken(token ?? null);
+      if (token) {
+        const sr = await fetch("/api/update-profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            label: name,
+            fields: {
+              "stealth-meta-address": keys.metaAddress,
+              "stealth-rotate-addr": "true",
+            },
+          }),
+        });
+        if (sr.ok) stealthOk = true;
+        else {
+          const j = await sr.json().catch(() => ({}));
+          stealthErr = j.error ?? "stealth-save-failed";
+        }
+      } else {
+        stealthErr = "no-session";
+      }
+    } catch (e) {
+      stealthErr = e instanceof Error ? e.message : "signature-rejected";
+    }
+    if (!stealthOk) {
+      setClaimState("stealth-failed");
+      setErrorMsg(stealthErr);
+      return;
+    }
+    setClaimState("fully-sealed");
+    setShowActivation(true);
+  };
+
+  // Allow the user to bail on stealth and finish onboarding without it. The
+  // recovery banner in the root layout will offer to seal it later, every
+  // time they come back, until they do.
+  const onSkipStealth = async () => {
+    // Pre-fetch the identity token so the activation card can save fields.
+    try {
+      const tok = await getAccessToken();
+      setIdentityToken(tok ?? null);
+    } catch {
+      setIdentityToken(null);
+    }
+    setClaimState("fully-sealed");
+    setShowActivation(true);
+  };
+
   const filled = claimState === "available";
   const claimInFlight =
     claimState === "claiming" ||
     claimState === "sealing-stealth";
-  const showStage = claimInFlight || claimState === "claimed" || claimState === "fully-sealed" || claimState === "error";
+  // Keep the inscription overlay up while sealing AND during the brief window
+  // between stealth success and the activation card appearing — avoids a
+  // flash back to the bare seal form.
+  const showStage =
+    claimInFlight ||
+    claimState === "claimed" ||
+    claimState === "error" ||
+    (claimState === "fully-sealed" && !showActivation && !showSealedBeat);
 
   const statusLine = !ready
     ? "…"
@@ -463,12 +562,35 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
         </div>
       )}
 
-      {showStage && !showSealedBeat && (
+      {showStage && !showSealedBeat && !showActivation && (
         <InscriptionStage
           name={name}
           state={mapToInscription(claimState)}
           errorMsg={errorMsg}
           lang={lang}
+        />
+      )}
+
+      {claimState === "stealth-failed" && (
+        <StealthRetryOverlay
+          name={name}
+          errorMsg={errorMsg}
+          lang={lang}
+          onRetry={onRetryStealth}
+          onSkip={onSkipStealth}
+        />
+      )}
+
+      {showActivation && claimState === "fully-sealed" && (
+        <ActivationCard
+          label={name}
+          address={user?.wallet?.address ?? null}
+          identityToken={identityToken}
+          lang={lang}
+          onDone={() => {
+            setShowActivation(false);
+            setShowSealedBeat(true);
+          }}
         />
       )}
 
@@ -492,6 +614,143 @@ export function OnboardingForm({ size: _size }: { size?: "mobile" | "desktop" })
           lang={lang}
         />
       )}
+    </div>
+  );
+}
+
+// StealthRetryOverlay — actionable replacement for the "broken seal" error
+// vignette. Inscription succeeded, only the stealth signature failed; users
+// need a clear retry path AND a way to escape if their wallet is misbehaving.
+function StealthRetryOverlay({
+  name,
+  errorMsg,
+  lang,
+  onRetry,
+  onSkip,
+}: {
+  name: string;
+  errorMsg: string | null;
+  lang: "en" | "cs";
+  onRetry: () => void | Promise<void>;
+  onSkip: () => void | Promise<void>;
+}) {
+  const cs = lang === "cs";
+  const copy = cs
+    ? {
+        kicker: "PEČEŤ ZAPSÁNA · TRASA DARŮ NE",
+        title: `${name}.pragueconnect.eth`,
+        body:
+          "Jméno je zapečetěné. Trasa soukromých darů ale ne — k tomu potřebujeme ještě jeden podpis. Stačí vteřina.",
+        retry: "Dokončit podpisem",
+        skip: "Přeskočit, vyřídím později",
+        hint: errorMsg ? `chyba: ${errorMsg}` : undefined,
+      }
+    : {
+        kicker: "NAME SEALED · PRIVATE ROUTE NOT YET",
+        title: `${name}.pragueconnect.eth`,
+        body:
+          "Your name is sealed in the ledger. The private gift route isn't — for that we need one more signature. It takes a second.",
+        retry: "Finish with one signature",
+        skip: "Skip — I'll do it later",
+        hint: errorMsg ? `error: ${errorMsg}` : undefined,
+      };
+  return (
+    <div
+      role="alertdialog"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 52,
+        background: "var(--parchment)",
+        backgroundImage: "var(--grain)",
+        backgroundSize: "4px 4px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        animation: "pc-fade-in 280ms ease-out",
+      }}
+    >
+      <div style={{ maxWidth: 460, width: "100%", textAlign: "center" }}>
+        <div className="kicker" style={{ color: "var(--vermilion)", marginBottom: 16 }}>
+          {copy.kicker}
+        </div>
+        <div
+          className="display"
+          style={{
+            fontSize: "clamp(28px, 7vw, 38px)",
+            color: "var(--ink)",
+            letterSpacing: "0.02em",
+            margin: "0 0 14px",
+            wordBreak: "break-all",
+          }}
+        >
+          {copy.title}
+        </div>
+        <p
+          className="italic"
+          style={{
+            fontSize: 16,
+            color: "var(--ink-70)",
+            lineHeight: 1.55,
+            margin: "0 auto 24px",
+            maxWidth: 380,
+          }}
+        >
+          {copy.body}
+        </p>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            maxWidth: 360,
+            margin: "0 auto",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              void onRetry();
+            }}
+            className="btn btn-ink btn-block"
+          >
+            {copy.retry}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void onSkip();
+            }}
+            className="btn btn-text"
+            style={{
+              fontFamily: "var(--display)",
+              fontSize: 12,
+              letterSpacing: "0.25em",
+              color: "var(--ink-70)",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px 0",
+            }}
+          >
+            {copy.skip}
+          </button>
+        </div>
+        {copy.hint && (
+          <p
+            className="mono"
+            style={{
+              fontSize: 11,
+              color: "var(--ink-50)",
+              marginTop: 22,
+              letterSpacing: "0.05em",
+            }}
+          >
+            {copy.hint}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

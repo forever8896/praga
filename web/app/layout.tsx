@@ -3,6 +3,7 @@ import { Cormorant_Garamond, EB_Garamond, JetBrains_Mono, UnifrakturCook } from 
 import { Providers } from "@/lib/providers";
 import { Navbar } from "@/lib/navbar";
 import { Footer } from "@/lib/footer";
+import { StealthRecoveryBanner } from "@/lib/stealth-recovery-banner";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <Navbar />
+          <StealthRecoveryBanner />
           {children}
           <Footer />
         </Providers>

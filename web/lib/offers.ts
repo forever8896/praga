@@ -167,7 +167,10 @@ export async function loadFeed(): Promise<{ offers: FeedOffer[]; people: FeedPer
   for (const s of subnames) {
     const verified = !!s.text_records?.description; // anyone with a bio is "verified" for the demo
     const ens = `${s.name}.${s.domain}`;
-    const ownerLocation = s.text_records?.location ?? "Praha";
+    // Don't paper over a missing location with a generic "Praha" — it makes
+    // every card look identical. Empty strings get filtered out in the
+    // render layer so the chip just disappears.
+    const ownerLocation = s.text_records?.location ?? "";
     const displayName = s.text_records?.name?.trim() || undefined;
 
     const offers = decodeOffers(s.text_records?.offers);

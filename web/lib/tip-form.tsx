@@ -16,7 +16,7 @@ import { useFx } from "./use-eth-czk";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, WaxSeal } from "./ornaments";
-import { PortraitRoundel } from "./profile-shared";
+import { SealPortrait } from "./seal-portrait";
 import { paymentAddress } from "./stealth";
 import { env } from "./env";
 import { encodeFunctionData, parseEther, type Hex } from "viem";
@@ -29,6 +29,7 @@ interface Recipient {
   address: `0x${string}` | null;
   stealthMeta: string;
   location: string;
+  avatar?: string | null;
 }
 
 interface InviterContext {
@@ -299,7 +300,7 @@ export function TipForm({ recipient }: { recipient: Recipient }) {
 
         <Cartouche padding={28} style={{ width: "100%" }}>
           <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16 }}>
-            <PortraitRoundel size={80} />
+            <SealPortrait address={recipient.address} avatarUrl={recipient.avatar ?? null} size={80} />
             <div style={{ flex: 1 }}>
               <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", lineHeight: 1.55 }}>
                 {hasStealth

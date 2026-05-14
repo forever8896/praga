@@ -4,7 +4,7 @@
 // user is part of, sorted by most recent letter, with live updates as new
 // messages arrive. This is the answer to "where do I see my messages?" — one
 // destination, reachable from the navbar at all times.
-import { usePrivy, useSignMessage } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Cartouche, FleurDeLis, WaxSeal } from "./ornaments";
@@ -66,7 +66,7 @@ function shortenAddr(addr: string): string {
 
 export function InboxView() {
   const { ready, authenticated, login, user } = usePrivy();
-  const { signMessage } = useSignMessage();
+  const { wallets } = useWallets();
   const [stage, setStage] = useState<
     "loading" | "needs-sign-in" | "preparing" | "ready" | "error"
   >("loading");
@@ -77,15 +77,19 @@ export function InboxView() {
 
   const refresh = useCallback(async () => {
     if (!myAddress) return;
+    // Match the user's primary address against the connected-wallet list so
+    // `wallet.sign()` works for both Privy embedded wallets and externals
+    // like MetaMask (where `useSignMessage()` doesn't apply).
+    const wallet = wallets.find(
+      (w) => w.address.toLowerCase() === myAddress.toLowerCase(),
+    ) ?? wallets[0];
+    if (!wallet) return;
     setStage("preparing");
     setErrMsg(null);
     try {
       const client = await getXmtpClient({
         address: myAddress as `0x${string}`,
-        signMessage: async (message: string) => {
-          const { signature } = await signMessage({ message });
-          return signature;
-        },
+        signMessage: (message: string) => wallet.sign(message),
       });
       myInboxIdRef.current = client.inboxId ?? "";
 
@@ -206,7 +210,7 @@ export function InboxView() {
       setErrMsg(e instanceof Error ? e.message : "letterbox-failed");
       setStage("error");
     }
-  }, [myAddress, signMessage]);
+  }, [myAddress, wallets]);
 
   useEffect(() => {
     if (!ready) return;
@@ -215,22 +219,24 @@ export function InboxView() {
       return;
     }
     if (!myAddress) return;
+    if (wallets.length === 0) return;
     refresh();
-  }, [ready, authenticated, myAddress, refresh]);
+  }, [ready, authenticated, myAddress, wallets.length, refresh]);
 
   // Live stream new messages so the inbox updates without a manual refresh.
   useEffect(() => {
     if (stage !== "ready" || !myAddress) return;
+    const wallet = wallets.find(
+      (w) => w.address.toLowerCase() === myAddress.toLowerCase(),
+    ) ?? wallets[0];
+    if (!wallet) return;
     let cancelled = false;
     let closer: { end: () => void } | null = null;
     (async () => {
       try {
         const client = await getXmtpClient({
           address: myAddress as `0x${string}`,
-          signMessage: async (message: string) => {
-            const { signature } = await signMessage({ message });
-            return signature;
-          },
+          signMessage: (message: string) => wallet.sign(message),
         });
         const myInboxId = client.inboxId ?? "";
         const stream = await client.conversations.streamAllDmMessages();
@@ -255,7 +261,7 @@ export function InboxView() {
       cancelled = true;
       closer?.end();
     };
-  }, [stage, myAddress, refresh, signMessage]);
+  }, [stage, myAddress, refresh, wallets]);
 
   const totalUnread = rows.filter((r) => r.unread).length;
 

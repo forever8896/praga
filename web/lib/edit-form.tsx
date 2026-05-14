@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { Cartouche, FleurDeLis, AlchemicalSigil, type SigilKind } from "./ornaments";
 import { derivePragueConnectKeys, PRAGUECONNECT_STEALTH_MESSAGE } from "./stealth";
 import { useT, useI18n } from "./i18n";
+import { NeighbourhoodPicker } from "./neighborhoods";
+import { SealPortrait } from "./seal-portrait";
 
 interface Skill {
   kind: SigilKind;
@@ -57,7 +59,7 @@ export function EditForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [publishedAt, setPublishedAt] = useState<{ limo: string; bzz: string } | null>(null);
+  const [publishedAt, setPublishedAt] = useState<{ limo: string; ipfs: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [myName, setMyName] = useState<MyName | null>(null);
 
@@ -178,7 +180,7 @@ export function EditForm() {
       }
       // Fire-and-forget Swarm publish so the .eth.limo personal site stays
       // in sync with the latest text records. Save completes regardless.
-      publishToSwarm();
+      publishSite();
       router.push(`/${myName.ens}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "save-failed");
@@ -187,7 +189,7 @@ export function EditForm() {
     }
   };
 
-  const publishToSwarm = async () => {
+  const publishSite = async () => {
     if (!myName?.label || !identityToken) return;
     setPublishing(true);
     try {
@@ -201,10 +203,10 @@ export function EditForm() {
       });
       const data = await res.json();
       if (res.ok && data.limo) {
-        setPublishedAt({ limo: data.limo, bzz: data.bzz });
+        setPublishedAt({ limo: data.limo, ipfs: data.ipfs });
       }
     } catch {
-      /* swarm publish is best-effort */
+      /* publish is best-effort */
     } finally {
       setPublishing(false);
     }
@@ -276,11 +278,10 @@ export function EditForm() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Field label={t("edit.fields.location")}>
-              <input
+              <NeighbourhoodPicker
                 value={location}
-                onChange={(e) => setLocation(e.target.value.slice(0, 60))}
-                style={inputStyle}
-                placeholder="Žižkov · Praha"
+                onChange={setLocation}
+                placeholderLabel={lang === "cs" ? "— vyberte čtvrť —" : "— pick a neighbourhood —"}
               />
             </Field>
             <Field label={t("edit.fields.avatar")}>
@@ -288,9 +289,46 @@ export function EditForm() {
                 value={avatar}
                 onChange={(e) => setAvatar(e.target.value.slice(0, 400))}
                 style={inputStyle}
-                placeholder="https://…"
+                placeholder={lang === "cs" ? "https://… nebo nechte prázdné pro pečetní znak" : "https://… or leave blank for your seal sigil"}
               />
             </Field>
+          </div>
+
+          {/* Live preview of how the avatar will render on the profile. If
+           *  the URL is set, the wax-seal frame holds it; if not, the
+           *  deterministic identicon stands in. */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              padding: "14px 16px",
+              border: "0.5px dashed var(--gilded)",
+              background: "var(--bone)",
+              marginTop: 4,
+            }}
+          >
+            <SealPortrait address={address ?? null} avatarUrl={avatar || null} size={84} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                className="t-display"
+                style={{ fontSize: 10, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}
+              >
+                {lang === "cs" ? "VAŠE PEČEŤ" : "YOUR SEAL"}
+              </div>
+              <div
+                className="t-italic"
+                style={{ fontSize: 13, color: "var(--ink-70)", lineHeight: 1.5 }}
+              >
+                {avatar
+                  ? lang === "cs"
+                    ? "Vlastní obrázek nasazený do voskové pečeti."
+                    : "Your image, set inside the wax-seal frame."
+                  : lang === "cs"
+                  ? "Vygenerováno z vaší peněženky — žádné dvě nejsou stejné. Nahrajte URL pro vlastní obrázek."
+                  : "Generated from your wallet — no two are alike. Paste a URL above for a custom image."}
+              </div>
+            </div>
           </div>
 
           <div className="hr-gilded" style={{ margin: "24px 0" }} />
@@ -383,26 +421,26 @@ export function EditForm() {
           <div className="hr-gilded" style={{ margin: "20px 0 18px" }} />
 
           <div className="t-display" style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--vermilion)", marginBottom: 4 }}>YOUR PERSONAL SITE</div>
-          <div className="t-display" style={{ fontSize: 22, letterSpacing: "0.04em", marginBottom: 6 }}>Served from Swarm</div>
+          <div className="t-display" style={{ fontSize: 22, letterSpacing: "0.04em", marginBottom: 6 }}>Served from IPFS</div>
           <div className="t-italic" style={{ fontSize: 14, color: "var(--ink-70)", lineHeight: 1.55, marginBottom: 12 }}>
-            Each save publishes a fresh static page to Swarm. The bzz reference is written to your subname's <code className="t-mono">contenthash</code>, so <code className="t-mono">{myName.ens}.limo</code> resolves to a Swarm-hosted page anyone can verify.
+            Each save pins a fresh static page to IPFS. The CID is written to your subname's <code className="t-mono">contenthash</code>, so <code className="t-mono">{myName.ens}.limo</code> resolves to an IPFS-hosted page anyone can verify.
           </div>
           {publishedAt ? (
             <div style={{ padding: "10px 12px", border: "0.5px solid var(--gilded)", background: "var(--bone)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <div className="t-mono" style={{ fontSize: 11, color: "var(--verdigris)" }}>✓ {publishing ? "republishing…" : "published to Swarm"}</div>
+              <div className="t-mono" style={{ fontSize: 11, color: "var(--verdigris)" }}>✓ {publishing ? "republishing…" : "pinned to IPFS"}</div>
               <div style={{ display: "flex", gap: 12 }}>
                 <a href={publishedAt.limo} target="_blank" rel="noreferrer" className="t-mono" style={{ fontSize: 11, color: "var(--ink)" }}>{myName.ens}.limo ↗</a>
-                <a href={publishedAt.bzz} target="_blank" rel="noreferrer" className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)" }}>bzz ↗</a>
+                <a href={publishedAt.ipfs} target="_blank" rel="noreferrer" className="t-mono" style={{ fontSize: 11, color: "var(--ink-70)" }}>ipfs ↗</a>
               </div>
             </div>
           ) : (
             <button
               type="button"
-              onClick={publishToSwarm}
+              onClick={publishSite}
               disabled={publishing || !myName.label}
               style={{ ...btnDark, padding: "10px 18px", fontSize: 11, opacity: publishing ? 0.6 : 1, cursor: publishing ? "wait" : "pointer" }}
             >
-              {publishing ? "PUBLISHING TO SWARM…" : "PUBLISH TO SWARM"}
+              {publishing ? "PINNING TO IPFS…" : "PUBLISH TO IPFS"}
             </button>
           )}
 

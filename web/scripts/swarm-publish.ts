@@ -10,7 +10,8 @@
 // prints both the raw reference and the `.eth.limo` URL it would resolve to.
 // Does NOT write the contenthash back to the resolver store — pass --persist
 // to also call /api/publish-site (requires the dev server running locally).
-import { renderProfileHtml, uploadHtmlToSwarm, isSwarmConfigured } from "../lib/swarm";
+import { uploadHtmlToSwarm, isSwarmConfigured } from "../lib/swarm";
+import { renderProfileHtml } from "../lib/site-html";
 import { getSubname } from "../lib/resolver-store";
 
 export {};
@@ -44,7 +45,7 @@ console.log(`  display: ${record.text_records?.name ?? "(no name set)"}`);
 console.log(`  address: ${record.address}`);
 
 console.log(`\n→ rendering HTML…`);
-const html = renderProfileHtml(record);
+const html = renderProfileHtml(record, "Swarm");
 console.log(`  ${html.length.toLocaleString()} bytes`);
 
 console.log(`\n→ uploading to ${process.env.SWARM_BEE_URL}…`);

@@ -3,7 +3,7 @@
 // Sealed XMTP thread view. The user's Privy wallet signs an installation key
 // once (XMTP "registration"), then conversations are E2E encrypted on the
 // XMTP network. UI streams new messages and lets the user reply.
-import { usePrivy, useSignMessage } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Cartouche, FleurDeLis, WaxSeal } from "./ornaments";
@@ -42,7 +42,7 @@ function decodeMessage(m: XmtpMessage, myInboxId: string): UiMessage | null {
 
 export function ThreadView({ peer }: { peer: Peer }) {
   const { ready, authenticated, login, user } = usePrivy();
-  const { signMessage } = useSignMessage();
+  const { wallets } = useWallets();
 
   const [stage, setStage] = useState<"loading" | "needs-sign-in" | "preparing" | "ready" | "missing-peer" | "error">(
     "loading",
@@ -60,15 +60,21 @@ export function ThreadView({ peer }: { peer: Peer }) {
 
   const initThread = useCallback(async () => {
     if (!myAddress || !peer.address) return;
+    // Find the wallet whose address matches the user's primary one. This is
+    // an embedded wallet for email/google logins and an external wallet
+    // (MetaMask, Rainbow…) for self-custody logins. `wallet.sign()` calls
+    // personal_sign on whichever it is — `useSignMessage()` would only work
+    // for the embedded one and silently fails for connected externals.
+    const wallet = wallets.find(
+      (w) => w.address.toLowerCase() === myAddress.toLowerCase(),
+    ) ?? wallets[0];
+    if (!wallet) return;
     setStage("preparing");
     setErrMsg(null);
     try {
       const client = await getXmtpClient({
         address: myAddress as `0x${string}`,
-        signMessage: async (message: string) => {
-          const { signature } = await signMessage({ message });
-          return signature;
-        },
+        signMessage: (message: string) => wallet.sign(message),
       });
       myInboxIdRef.current = client.inboxId ?? "";
       const conversation = await openDm(client, peer.address);
@@ -123,7 +129,7 @@ export function ThreadView({ peer }: { peer: Peer }) {
       setErrMsg(e instanceof Error ? e.message : "xmtp-init-failed");
       setStage("error");
     }
-  }, [myAddress, peer.address, signMessage]);
+  }, [myAddress, peer.address, wallets]);
 
   useEffect(() => {
     if (!ready) return;
@@ -140,12 +146,15 @@ export function ThreadView({ peer }: { peer: Peer }) {
       setStage("error");
       return;
     }
+    // External wallets (MetaMask) populate `wallets` after a one-tick delay
+    // — wait for it before signing, otherwise `wallet.sign()` is unreachable.
+    if (wallets.length === 0) return;
     initThread();
     return () => {
       streamCloserRef.current?.end();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, authenticated, myAddress, peer.address]);
+  }, [ready, authenticated, myAddress, peer.address, wallets.length]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });

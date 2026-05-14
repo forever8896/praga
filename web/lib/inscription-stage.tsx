@@ -18,13 +18,13 @@ export type InscriptionState = "carving" | "sealing" | "done" | "error";
 const NARRATIONS_EN = [
   "the parchment receives the name…",
   "the seal is being cut in PragueConnect's ledger…",
-  "a place on Swarm is being prepared for your hand…",
+  "a place on IPFS is being prepared for your hand…",
 ] as const;
 
 const NARRATIONS_CS = [
   "pergamen přijímá jméno…",
   "pečeť se vyrývá do knihy PragueConnect…",
-  "místo na Swarmu se připravuje pro vaši ruku…",
+  "místo na IPFS se připravuje pro vaši ruku…",
 ] as const;
 
 export function InscriptionStage({

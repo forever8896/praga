@@ -35,6 +35,6 @@ export async function POST(req: Request) {
     ok: true,
     count: codes.length,
     codes,
-    inviteUrls: codes.map((c) => `https://pragueconnect-azure.vercel.app/i/${c}`),
+    inviteUrls: codes.map((c) => `https://www.pragueconnect.xyz/i/${c}`),
   });
 }

@@ -64,11 +64,15 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
   // Fetch our own stealth meta-address so the taskId can commit to our
   // spending-key-derived address rather than our main EOA. Without this the
   // taskId leaks `keccak256(funderEOA, workerEOA)` — re-computable by anyone
-  // who suspects the two parties.
+  // who suspects the two parties. We also stash our own label so onAccept
+  // can write the freshly-derived stealth recipient back to our bulletin —
+  // without that, the wallet's StealthInbox can't find the funds.
   const [myStealthMeta, setMyStealthMeta] = useState<string>("");
+  const [myLabel, setMyLabel] = useState<string | null>(null);
   useEffect(() => {
     if (!authenticated || !identityToken) {
       setMyStealthMeta("");
+      setMyLabel(null);
       return;
     }
     let cancelled = false;
@@ -78,8 +82,14 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
           headers: { Authorization: `Bearer ${identityToken}` },
         });
         if (!res.ok) return;
-        const data = (await res.json()) as { text_records?: Record<string, string> };
-        if (!cancelled) setMyStealthMeta(data.text_records?.["stealth-meta-address"] ?? "");
+        const data = (await res.json()) as {
+          text_records?: Record<string, string>;
+          label?: string;
+        };
+        if (!cancelled) {
+          setMyStealthMeta(data.text_records?.["stealth-meta-address"] ?? "");
+          setMyLabel(data.label ?? null);
+        }
       } catch {
         /* leave empty — taskId falls back to EOA */
       }
@@ -255,6 +265,25 @@ export function EscrowPanel({ myAddress, peerAddress, peerEns, peerStealthMeta, 
           args: [taskId, stealthRecipient, ephemeralPubKey, viewTag],
         });
         await sendTx(data);
+      }
+      // Tell our own bulletin about this stealth address so the wallet's
+      // StealthInbox finds the funds when the task releases. Best-effort —
+      // accept already succeeded on-chain; we don't want a KV blip to look
+      // like a failed accept to the user.
+      if (myLabel && identityToken) {
+        fetch("/api/stealth/bulletin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${identityToken}`,
+          },
+          body: JSON.stringify({
+            label: myLabel,
+            stealthAddress: stealthRecipient,
+            ephemeralPubKey,
+            viewTag,
+          }),
+        }).catch(() => {/* best-effort */});
       }
       await onSystemMessage?.(`Accepted the work. A fresh stealth address has been committed as the payout destination${v2 ? "; the worker's main wallet stays unlinked" : ""}.`);
       setTimeout(refresh, 2500);

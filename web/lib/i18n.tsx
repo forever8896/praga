@@ -261,6 +261,23 @@ const DICT: Dict = {
   },
   "crops.back": { en: "← back", cs: "← zpět" },
 
+  // Stealth recovery banner — shown to users with a claimed name but no
+  // stealth meta-address (claim was interrupted before the second signature).
+  "stealth.banner.headline": {
+    en: "ONE SIGNATURE SHORT",
+    cs: "JEŠTĚ JEDEN PODPIS",
+  },
+  "stealth.banner.body": {
+    en: "Your name is sealed, but the private gift route isn't. Sign once more to finish setting up your inbox — it takes a second.",
+    cs: "Jméno je zapečetěné, trasa soukromých darů zatím ne. Stačí jeden podpis a vaše schránka bude hotová — vteřina.",
+  },
+  "stealth.banner.cta": { en: "Finish setup", cs: "Dokončit" },
+  "stealth.banner.dismiss": { en: "later", cs: "později" },
+  "stealth.banner.done": {
+    en: "✓ private route sealed",
+    cs: "✓ trasa darů zapečetěna",
+  },
+
   // Inheritance pull-tab + sealed-by trail
   "inherit.kicker": { en: "AN INVITATION", cs: "POZVÁNKA" },
   "inherit.youWereLed": { en: "You were led to this seal by", cs: "K této pečeti vás přivedl/a" },

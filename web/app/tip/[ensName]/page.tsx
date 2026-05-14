@@ -23,6 +23,7 @@ export default async function TipPage({
     address: record?.address ?? null,
     stealthMeta: record?.text_records?.["stealth-meta-address"] ?? "",
     location: record?.text_records?.location ?? "",
+    avatar: record?.text_records?.avatar?.trim() || null,
   };
   return <TipForm recipient={recipient} />;
 }

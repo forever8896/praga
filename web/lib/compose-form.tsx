@@ -16,6 +16,7 @@ import {
 import { decodeOffers, encodeOffers, type OfferType, type StoredOffer } from "./offers";
 import { useT } from "./i18n";
 import { useFx } from "./use-eth-czk";
+import { NeighbourhoodPicker } from "./neighborhoods";
 
 interface MyName {
   claimed: boolean;
@@ -299,24 +300,14 @@ export function ComposeForm() {
                 )}
               </Field>
               <Field label={t("compose.where")}>
-                <input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value.slice(0, 60))}
-                  placeholder="Žižkov"
-                  style={inputStyle}
-                />
+                <NeighbourhoodPicker value={location} onChange={setLocation} />
               </Field>
             </div>
           )}
 
           {type === "GIFT" && (
             <Field label="WHERE — neighbourhood">
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value.slice(0, 60))}
-                placeholder="Žižkov"
-                style={inputStyle}
-              />
+              <NeighbourhoodPicker value={location} onChange={setLocation} />
             </Field>
           )}
 

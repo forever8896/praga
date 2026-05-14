@@ -2,10 +2,8 @@
 // Reads the actual NameStone record for the requested label. If the name has
 // not been claimed yet, we show a "not yet inscribed" placeholder.
 import { AlchemicalSigil, Cartouche, FleurDeLis, Marginalia, WaxSeal } from "@/lib/ornaments";
-import {
-  PortraitRoundel,
-  ProfileHeader,
-} from "@/lib/profile-shared";
+import { ProfileHeader } from "@/lib/profile-shared";
+import { SealPortrait } from "@/lib/seal-portrait";
 import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
@@ -30,6 +28,7 @@ interface ProfileData {
   address: `0x${string}` | null;
   bio: string;
   location: string;
+  avatar: string | null;
   sealedBy: string | null;
   isClaimed: boolean;
   hasStealth: boolean;
@@ -56,6 +55,7 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
       address: null,
       bio: "",
       location: "",
+      avatar: null,
       sealedBy: null,
       isClaimed: false,
       hasStealth: false,
@@ -79,7 +79,8 @@ async function loadProfile(rawName: string): Promise<ProfileData> {
     display,
     address: record.address,
     bio: record.text_records?.description ?? "",
-    location: record.text_records?.location ?? "Praha",
+    location: record.text_records?.location ?? "",
+    avatar: record.text_records?.avatar?.trim() || null,
     sealedBy: record.text_records?.["sealed-by"] ?? null,
     isClaimed: true,
     hasStealth: !!record.text_records?.["stealth-meta-address"],
@@ -346,7 +347,7 @@ function MobileProfile({ profile }: { profile: ProfileData }) {
       <Cartouche padding={20}>
         <ProfileHeader size="mobile" name={profile.display} ens={profile.ens} />
         <div style={{ textAlign: "center", marginTop: 8 }}>
-          <PortraitRoundel size={140} />
+          <SealPortrait address={profile.address} avatarUrl={profile.avatar} size={140} />
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
           <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: "var(--vermilion)", display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -449,7 +450,7 @@ function DesktopProfile({ profile }: { profile: ProfileData }) {
 
           <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 36, alignItems: "flex-start", marginTop: 12 }}>
             <div>
-              <PortraitRoundel size={260} />
+              <SealPortrait address={profile.address} avatarUrl={profile.avatar} size={260} />
               <div style={{ display: "flex", justifyContent: "center", marginTop: -28, position: "relative", zIndex: 1 }}>
                 <WaxSeal size={70} state="rubedo" rotate={-9} emboss="fleur" label="VERIFIED HUMAN ·" />
               </div>

@@ -35,6 +35,11 @@ interface RawReceipt {
   memo: string;
   fromEns?: string;
   recipientEns?: string;
+  /** Defaults to "tip" for legacy responses without the field. */
+  kind?: "tip" | "escrow";
+  /** Set when kind === "escrow". */
+  taskId?: `0x${string}`;
+  rating?: number;
 }
 
 interface ReceiptsResponse {
@@ -91,7 +96,15 @@ export function WalletView() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [address, "latest"] }),
           }).then((r) => r.json()),
-          fetch(`/api/receipts?address=${address}`).then((r) => r.json()),
+          // Receipts: anonymously gets you tips only. Pass label + Bearer
+          // to unlock escrow TaskReleased events for the same EOA. /api/my-name
+          // returns the label, but it's queried in parallel — for a first
+          // load we cheaply re-issue without label and refetch with label
+          // once myName lands. Cleaner: include label up-front when we have
+          // it cached from a previous load.
+          fetch(`/api/receipts?address=${address}`, {
+            headers: identityToken ? { Authorization: `Bearer ${identityToken}` } : undefined,
+          }).then((r) => r.json()),
           identityToken
             ? fetch(`/api/my-name`, { headers: { Authorization: `Bearer ${identityToken}` } }).then((r) => r.json())
             : Promise.resolve(null),
@@ -107,6 +120,27 @@ export function WalletView() {
           setErr(data.error);
         }
         if (mineRes && mineRes.ok) setMyName(mineRes);
+
+        // If we got a label back, re-issue the receipts call with it so
+        // escrow TaskReleased events get included. Cheap (already cached
+        // logs in tip-events for the most part) and the user shouldn't
+        // need to refresh to see jobs they completed.
+        if (mineRes && mineRes.ok && mineRes.label && identityToken && !cancelled) {
+          try {
+            const reRes = await fetch(
+              `/api/receipts?address=${address}&label=${encodeURIComponent(mineRes.label)}`,
+              { headers: { Authorization: `Bearer ${identityToken}` } },
+            ).then((r) => r.json());
+            if (cancelled) return;
+            const reData = reRes as ReceiptsResponse;
+            if (reData.ok) {
+              setSent(reData.sent ?? []);
+              setReceived(reData.received ?? []);
+            }
+          } catch {
+            /* keep tip-only fallback */
+          }
+        }
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : "load-failed");
       } finally {
@@ -260,16 +294,29 @@ function LedgerRow({ r, kind, fx }: { r: RawReceipt; kind: "sent" | "received"; 
   const sign = kind === "received" ? "+" : "−";
   const accent = kind === "received" ? "var(--verdigris)" : "var(--vermilion)";
   const ethAmount = Number.parseFloat(r.amountEth) || 0;
+  const isEscrow = r.kind === "escrow";
+  const headlineLabel = isEscrow
+    ? kind === "received" ? "ESCROW RELEASED" : "ESCROW PAID"
+    : kind === "received" ? "GIFT RECEIVED" : "GIFT GIVEN";
   return (
     <Link href={`/r/${r.txHash}`} style={{ textDecoration: "none", color: "inherit" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 0", borderBottom: "0.5px solid var(--gilded)" }}>
         <WaxSeal size={42} state="rubedo" rotate={(r.txHash.length % 12) - 6} emboss="fleur" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2, flexWrap: "wrap" }}>
             <AlchemicalSigil kind={sigilKind} size={18} frame={false} />
             <span className="t-display" style={{ fontSize: 9, letterSpacing: "0.3em", color: accent }}>
-              {kind === "received" ? "GIFT RECEIVED" : "GIFT GIVEN"}
+              {headlineLabel}
             </span>
+            {isEscrow && r.rating !== undefined && (
+              <span
+                className="t-mono"
+                style={{ fontSize: 10, color: "var(--gilded-soft)", letterSpacing: "0.1em" }}
+                title={`Released with a ${r.rating}/5 rating`}
+              >
+                {"★".repeat(r.rating)}{"☆".repeat(Math.max(0, 5 - r.rating))}
+              </span>
+            )}
           </div>
           <div className="t-italic" style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.4 }}>
             {kind === "sent" ? "to" : "from"}{" "}

@@ -114,8 +114,9 @@ function OfferingCard({
               {price}
             </span>
             <span className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)" }}>
-              {offer.location || "Praha"}
-              {offer.source === "offer" ? ` · ${timeAgo(offer.posted_at)}` : ""}
+              {offer.location || ""}
+              {offer.location && offer.source === "offer" ? " · " : ""}
+              {offer.source === "offer" ? timeAgo(offer.posted_at) : ""}
             </span>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -188,7 +189,7 @@ function AskCard({
               {budget}
             </span>
             <span className="t-italic" style={{ fontSize: 13, color: "var(--ink-70)" }}>
-              {offer.location || "Praha"} · {timeAgo(offer.posted_at)}
+              {offer.location ? `${offer.location} · ` : ""}{timeAgo(offer.posted_at)}
             </span>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -392,7 +393,10 @@ export function FeedView({ offers, people }: { offers: FeedOffer[]; people: Feed
   const neighbourhoods = useMemo(() => {
     const counts = new Map<string, number>();
     for (const o of offers) {
-      const loc = (o.location || "Praha").trim();
+      // Skip offers with no real neighbourhood so the filter chips don't fill
+      // up with generic "Praha" entries — they should reflect actual signal.
+      const loc = (o.location || "").trim();
+      if (!loc) continue;
       counts.set(loc, (counts.get(loc) ?? 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);

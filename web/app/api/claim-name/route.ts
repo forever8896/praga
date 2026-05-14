@@ -103,10 +103,14 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Only `url` is auto-filled — it's a deterministic canonical link, not a
+    // personal field. `name` and `location` were defaulted to
+    // Capitalize(label) and "Praha" in early demos, but that left every user
+    // looking identical and undercut the "your hand" framing. Better to
+    // leave them blank so the activation step (or /me/edit) can capture real
+    // values from the user.
     const text_records: Record<string, string> = {
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      location: "Praha",
-      url: `https://pragueconnect-azure.vercel.app/${name}.pragueconnect.eth`,
+      url: `https://www.pragueconnect.xyz/${name}.pragueconnect.eth`,
     };
     if (sealedBy) text_records["sealed-by"] = sealedBy;
     await setSubname({
