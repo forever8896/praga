@@ -165,6 +165,10 @@ export async function loadFeed(): Promise<{ offers: FeedOffer[]; people: FeedPer
   const out: FeedOffer[] = [];
   const people: FeedPerson[] = [];
   for (const s of subnames) {
+    // Group rooms have their own surface (/groups). Skip them in the
+    // town-square feed so people-discovery stays about people.
+    if (s.text_records?.["pc.group"] === "1") continue;
+
     const verified = !!s.text_records?.description; // anyone with a bio is "verified" for the demo
     const ens = `${s.name}.${s.domain}`;
     // Don't paper over a missing location with a generic "Praha" — it makes

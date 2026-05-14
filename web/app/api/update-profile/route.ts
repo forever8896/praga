@@ -29,6 +29,18 @@ const ALLOWED_FIELDS = new Set([
   // ENSIP-25 agent delegation: a JSON attestation describing an authorised
   // agent (the "familiar") and what scopes it may act on the human's behalf.
   "agent-registration",
+  // Group rooms — a subname can carry a "pc.group=1" marker + topic/description
+  // /XMTP id/etc. See lib/group.ts for the schema.
+  "pc.group",
+  "pc.group.topic",
+  "pc.group.description",
+  "pc.group.created_by",
+  "pc.group.created_at",
+  "pc.group.xmtp",
+  "pc.group.sigil",
+  "pc.group.visibility",
+  "pc.group.member_count",
+  "pc.group.pending",
 ]);
 
 export async function POST(req: Request) {

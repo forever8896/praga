@@ -57,6 +57,7 @@ export function Navbar({ variant = "default" }: { variant?: "default" | "transpa
 
   const links: Array<{ href: string; label: string; show: "always" | "auth" }> = [
     { href: "/feed", label: t("nav.townsquare"), show: "always" },
+    { href: "/groups", label: t("nav.groups"), show: "always" },
     { href: "/m", label: t("nav.letterbox"), show: "auth" },
     { href: "/compose", label: t("nav.compose"), show: "auth" },
     { href: "/wallet", label: t("nav.wallet"), show: "auth" },

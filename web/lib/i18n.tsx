@@ -39,6 +39,7 @@ const DICT: Dict = {
 
   // Navbar
   "nav.townsquare": { en: "Town square", cs: "Náměstí" },
+  "nav.groups": { en: "Rooms", cs: "Místnosti" },
   "nav.letterbox": { en: "Letterbox", cs: "Schránka" },
   "nav.compose": { en: "Post an offer", cs: "Vyvěsit nabídku" },
   "nav.edit": { en: "Edit your seal", cs: "Upravit pečeť" },

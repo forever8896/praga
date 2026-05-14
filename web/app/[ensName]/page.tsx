@@ -1,9 +1,11 @@
 // Screen 3 — Profile / personal site (`username.pragueconnect.eth.limo`)
 // Reads the actual NameStone record for the requested label. If the name has
 // not been claimed yet, we show a "not yet inscribed" placeholder.
+import { redirect } from "next/navigation";
 import { AlchemicalSigil, Cartouche, FleurDeLis, Marginalia, WaxSeal } from "@/lib/ornaments";
 import { ProfileHeader } from "@/lib/profile-shared";
 import { SealPortrait } from "@/lib/seal-portrait";
+import { isGroupRecord } from "@/lib/group";
 import { getSubname } from "@/lib/resolver";
 import { env } from "@/lib/env";
 import { loadTipReceipts, type TipReceipt } from "@/lib/tip-events";
@@ -101,6 +103,18 @@ export default async function ProfilePage({
   params: Promise<{ ensName: string }>;
 }) {
   const { ensName: rawName } = await params;
+
+  // Group subnames live at /g/<label>. If a visitor lands here on a group
+  // slug (e.g. via an ENS resolver or an old link), redirect server-side
+  // so they land on the room rather than seeing a person-shaped page that
+  // doesn't quite fit.
+  const ens = rawName.includes(".") ? rawName : `${rawName}.pragueconnect.eth`;
+  const label = ens.split(".")[0];
+  const groupCheck = await getSubname(env.namestoneDomain, label).catch(() => null);
+  if (groupCheck && isGroupRecord(groupCheck.text_records)) {
+    redirect(`/g/${label}`);
+  }
+
   const profile = await loadProfile(rawName);
 
   return (
